@@ -28,3 +28,12 @@ Looking ahead, the heavier steps, cloning the repository and analyzing the diff,
 
 1. A pull request is opened on GitHub.
 2. GitHub fires a webhook event to our handler's URL
+3. The Cloudflare Worker receives the event and validates it.
+4. The Worker extracts the key details, such as pull request number, author, and branch.
+5. For this week, the Worker logs or acknowledges the event. In a later phase, it will place a job on a queue for heavier processing.
+
+## Next Steps
+1. Set up a Cloudflare Worker and deploy a basic handler that receives requests.
+2. Register the webhook in the GitHub repository settings, pointing to the Worker's URL, and subscribe to pull request events.
+3. Verify the end-to-end flow by opening a test pull request and confirming the Worker receives and logs the event.
+4. In a later phase, add queue-based handoff to a heavier container for cloning and diff analysis.
