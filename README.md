@@ -15,3 +15,8 @@ Cloudflare Workers is a lightweight serverless platform that runs small pieces o
 
 ### Option Two, AWS Fargate
 AWS Fargate runs full containers with no runtime limits, so it can clone repositories and perform heavy work. It is powerful and flexible. The trade-offs are a heavier setup, and it does not scale to zero, meaning it costs money even when idle. It also requires more AWS configuration and a billing setup.
+
+## Recommendation
+Receiving and detecting pull request events, Cloudflare Workers is the recommended choice. The task is lightweight, event-driven, and short-lived, which matches exactly what Workers is built for. It requires no billing setup, scales to zero, and can be deployed quickly on a free account.
+
+Looking ahead, the heavier steps, cloning the repository and analyzing the diff, exceed what Cloudflare Workers can handle in process. Rather than forcing everything onto one platform, the proposed architecture splits the work. The Cloudflare Worker receives the webhook and places a job on a queue. A separate container, such as AWS Fargate triggered by that queue, performs the heavy cloning and analysis later. This keeps the fast path cheap and simple, while reserving heavier infrastructure only for when it is actually needed.
