@@ -23,3 +23,5 @@ AWS Fargate runs full containers with no runtime limits, so it can clone reposit
 Receiving and detecting pull request events, Cloudflare Workers is the recommended choice. The task is lightweight, event-driven, and short-lived, which matches exactly what Workers is built for. It requires no billing setup, scales to zero, and can be deployed quickly on a free account.
 
 Looking ahead, the heavier steps, cloning the repository and analyzing the diff, exceed what Cloudflare Workers can handle in process. Rather than forcing everything onto one platform, the proposed architecture splits the work. The Cloudflare Worker receives the webhook and places a job on a queue. A separate container, such as AWS Fargate triggered by that queue, performs the heavy cloning and analysis later. This keeps the fast path cheap and simple, while reserving heavier infrastructure only for when it is actually needed.
+
+1. A pull request is opened on GitHub.
