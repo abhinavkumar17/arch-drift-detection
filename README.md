@@ -24,4 +24,7 @@ Receiving and detecting pull request events, Cloudflare Workers is the recommend
 
 Looking ahead, the heavier steps, cloning the repository and analyzing the diff, exceed what Cloudflare Workers can handle in process. Rather than forcing everything onto one platform, the proposed architecture splits the work. The Cloudflare Worker receives the webhook and places a job on a queue. A separate container, such as AWS Fargate triggered by that queue, performs the heavy cloning and analysis later. This keeps the fast path cheap and simple, while reserving heavier infrastructure only for when it is actually needed.
 
+## How It Connects
+
 1. A pull request is opened on GitHub.
+2. GitHub fires a webhook event to our handler's URL
