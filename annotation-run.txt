@@ -1,0 +1,395 @@
+Source/Alamofire.swift:42   -     public static let version = "5.11.2"
+Source/Alamofire.swift:42   +     public static let version = "5.12.0"
+Source/Core/DataRequest.swift:108  -                         self.mutableState.write { mutableState in
+Source/Core/DataRequest.swift:109  -                             mutableState.state = .cancelled
+Source/Core/DataRequest.swift:110  -                             mutableState.error = mutableState.error ?? AFError.explicitlyCancelled
+Source/Core/DataRequest.swift:111  -                         }
+Source/Core/DataRequest.swift:108  +                         self.cancel()
+Source/Core/DataStreamRequest.swift:164  +                     // Ensure we can write, as the stream may have been closed while this was enqueued.
+Source/Core/DataStreamRequest.swift:165  +                     guard stream.hasSpaceAvailable else { return }
+Source/Core/DataStreamRequest.swift:184  -                         self.mutableState.write { mutableState in
+Source/Core/DataStreamRequest.swift:185  -                             mutableState.state = .cancelled
+Source/Core/DataStreamRequest.swift:186  -                             mutableState.error = mutableState.error ?? AFError.explicitlyCancelled
+Source/Core/DataStreamRequest.swift:187  -                         }
+Source/Core/DataStreamRequest.swift:186  +                         self.cancel()
+Source/Core/DataStreamRequest.swift:350  -         let parser = { @Sendable [unowned self] (data: Data) in
+Source/Core/DataStreamRequest.swift:349  +         let parser = { @Sendable [weak self] (data: Data) in
+Source/Core/DataStreamRequest.swift:350  +             guard let self else { return }
+Source/Core/DataStreamRequest.swift:351  + 
+Source/Core/DataStreamRequest.swift:379  -         let parser = { @Sendable [unowned self] (data: Data) in
+Source/Core/DataStreamRequest.swift:380  +         let parser = { @Sendable [weak self] (data: Data) in
+Source/Core/DataStreamRequest.swift:381  +             guard let self else { return }
+Source/Core/DataStreamRequest.swift:382  + 
+Source/Core/DataStreamRequest.swift:420  -         let parser = { @Sendable [unowned self] (data: Data) in
+Source/Core/DataStreamRequest.swift:423  +         let parser = { @Sendable [weak self] (data: Data) in
+Source/Core/DataStreamRequest.swift:424  +             guard let self else { return }
+Source/Core/DataStreamRequest.swift:425  + 
+Source/Core/DownloadRequest.swift:70   -             let url = directoryURLs.first?.appendingPathComponent(response.suggestedFilename!) ?? temporaryURL
+Source/Core/DownloadRequest.swift:70   +             let url = response.suggestedFilename.flatMap { directoryURLs.first?.appendingPathComponent($0) } ?? temporaryURL
+Source/Core/DownloadRequest.swift:274  -             guard let task = mutableState.tasks.last as? URLSessionDownloadTask, task.state != .completed else {
+Source/Core/DownloadRequest.swift:274  +             // Ensure we have a task. If we do, didCreateTask has been called but wouldn't have changed the task state
+Source/Core/DownloadRequest.swift:275  +             // since we just transitioned to cancelled. If we don't, didCreateTask hasn't been called yet, so we can
+Source/Core/DownloadRequest.swift:276  +             // start the finish process and return early, as didCreateTask will perform the task changes but we won't
+Source/Core/DownloadRequest.swift:277  +             // receive any task delegate callback.
+Source/Core/DownloadRequest.swift:278  +             guard let task = mutableState.tasks.last as? URLSessionDownloadTask else {
+Source/Core/DownloadRequest.swift:282  +             // We have a task, if it's completed, return early, as the delegate callbacks should be in flight and
+Source/Core/DownloadRequest.swift:283  +             // cancelling it will have no effect.
+Source/Core/DownloadRequest.swift:284  +             guard task.state != .completed else { return }
+Source/Core/DownloadRequest.swift:394  -                 guard let serializerError = result.failure, let delegate = self.delegate else {
+Source/Core/DownloadRequest.swift:401  +                 guard !self.isCancelled, let serializerError = result.failure, let delegate = self.delegate else {
+Source/Core/Request.swift:391  -         mutableState.write { state in
+Source/Core/Request.swift:392  -             state.tasks.append(task)
+Source/Core/Request.swift:391  +         mutableState.write { mutableState in
+Source/Core/Request.swift:392  +             mutableState.tasks.append(task)
+Source/Core/Request.swift:394  -             guard let urlSessionTaskHandler = state.urlSessionTaskHandler else { return }
+Source/Core/Request.swift:394  +             if let urlSessionTaskHandler = mutableState.urlSessionTaskHandler {
+Source/Core/Request.swift:395  +                 urlSessionTaskHandler.queue.async { urlSessionTaskHandler.handler(task) }
+Source/Core/Request.swift:396  +             }
+Source/Core/Request.swift:396  -             urlSessionTaskHandler.queue.async { urlSessionTaskHandler.handler(task) }
+Source/Core/Request.swift:398  +             // Only safe because eventMonitor immediately enqueues.
+Source/Core/Request.swift:399  +             // TODO: When switching to sync EventMonitor, restructure event order.
+Source/Core/Request.swift:400  +             mutableState.eventMonitor?.request(self, didCreateTask: task)
+Source/Core/Request.swift:401  + 
+Source/Core/Request.swift:402  +             // Should only have an effect if state was updated before the task was created and wasn't able update it.
+Source/Core/Request.swift:403  +             // If this runs before a state update method (e.g. cancel()), it will still be in the initialized state and
+Source/Core/Request.swift:404  +             // do nothing.
+Source/Core/Request.swift:405  +             switch mutableState.state {
+Source/Core/Request.swift:406  +             case .initialized, .finished:
+Source/Core/Request.swift:407  +                 // Do nothing.
+Source/Core/Request.swift:408  +                 break
+Source/Core/Request.swift:409  +             case .resumed:
+Source/Core/Request.swift:410  +                 task.resume()
+Source/Core/Request.swift:411  +                 underlyingQueue.async { self.didResumeTask(task) }
+Source/Core/Request.swift:412  +             case .suspended:
+Source/Core/Request.swift:413  +                 task.suspend()
+Source/Core/Request.swift:414  +                 underlyingQueue.async { self.didSuspendTask(task) }
+Source/Core/Request.swift:415  +             case .cancelled:
+Source/Core/Request.swift:416  +                 // Resume to ensure metrics are gathered.
+Source/Core/Request.swift:417  +                 task.resume()
+Source/Core/Request.swift:418  +                 task.cancel()
+Source/Core/Request.swift:419  +                 underlyingQueue.async { self.didCancelTask(task) }
+Source/Core/Request.swift:420  +             }
+Source/Core/Request.swift:398  - 
+Source/Core/Request.swift:399  -         eventMonitor?.request(self, didCreateTask: task)
+Source/Core/Request.swift:669  -     /// Perform a closure on the current `state` while locked.
+Source/Core/Request.swift:670  -     ///
+Source/Core/Request.swift:671  -     /// - Parameter perform: The closure to perform.
+Source/Core/Request.swift:672  -     func withState(perform: (State) -> Void) {
+Source/Core/Request.swift:673  -         mutableState.withState(perform: perform)
+Source/Core/Request.swift:674  -     }
+Source/Core/Request.swift:675  - 
+Source/Core/Request.swift:707  -             guard let task = mutableState.tasks.last, task.state != .completed else {
+Source/Core/Request.swift:722  +             // Ensure we have a task. If we do, didCreateTask has been called but wouldn't have changed the task state
+Source/Core/Request.swift:723  +             // since we just transitioned to cancelled. If we don't, didCreateTask hasn't been called yet, so we can
+Source/Core/Request.swift:724  +             // start the finish process and return early, as didCreateTask will perform the task changes but we won't
+Source/Core/Request.swift:725  +             // receive any task delegate callback.
+Source/Core/Request.swift:726  +             guard let task = mutableState.tasks.last else {
+Source/Core/Request.swift:730  +             // We have a task, if it's completed, return early, as the delegate callbacks should be in flight and
+Source/Core/Request.swift:731  +             // cancelling it will have no effect.
+Source/Core/Request.swift:732  +             guard task.state != .completed else { return }
+Source/Core/Request.swift:754  -             guard let task = mutableState.tasks.last, task.state != .completed else { return true }
+Source/Core/Request.swift:776  +             // Ensure we have a task, otherwise Session hasn't called perform yet.
+Source/Core/Request.swift:777  +             guard let task = mutableState.tasks.last else { return true }
+Source/Core/Request.swift:778  +             // We have a task, so we shouldn't need to trigger perform again.
+Source/Core/Request.swift:779  +             guard task.state != .completed else { return false }
+Source/Core/Request.swift:758  -             return true
+Source/Core/Request.swift:783  +             return false
+Source/Core/Session.swift:89   -     /// Internal map between `Request`s and any `URLSessionTasks` that may be in flight for them.
+Source/Core/Session.swift:90   -     var requestTaskMap = RequestTaskMap()
+Source/Core/Session.swift:91   -     /// `Set` of currently active `Request`s.
+Source/Core/Session.swift:92   -     var activeRequests: Set<Request> = []
+Source/Core/Session.swift:93   -     /// Completion events awaiting `URLSessionTaskMetrics`.
+Source/Core/Session.swift:94   -     var waitingCompletions: [URLSessionTask: () -> Void] = [:]
+Source/Core/Session.swift:89   +     struct MutableState {
+Source/Core/Session.swift:90   +         /// Internal map between `Request`s and any `URLSessionTasks` that may be in flight for them.
+Source/Core/Session.swift:91   +         var requestTaskMap = RequestTaskMap()
+Source/Core/Session.swift:92   +         /// `Set` of currently active `Request`s.
+Source/Core/Session.swift:93   +         var activeRequests: Set<Request> = []
+Source/Core/Session.swift:94   +         /// Completion events awaiting `URLSessionTaskMetrics`.
+Source/Core/Session.swift:95   +         var waitingCompletions: [URLSessionTask: () -> Void] = [:]
+Source/Core/Session.swift:96   +     }
+Source/Core/Session.swift:97   + 
+Source/Core/Session.swift:98   +     let mutableState = Protected(MutableState())
+Source/Core/Session.swift:232  -         finishRequestsForDeinit()
+Source/Core/Session.swift:236  +         let requests = mutableState.read(\.activeRequests)
+Source/Core/Session.swift:237  +         delegate.sessionInvalidationCleanup.write {
+Source/Core/Session.swift:238  +             for request in requests where !request.isFinished {
+Source/Core/Session.swift:239  +                 request.finish(error: .sessionDeinitialized)
+Source/Core/Session.swift:240  +             }
+Source/Core/Session.swift:241  +         }
+Source/Core/Session.swift:242  + 
+Source/Core/Session.swift:249  -             action(self.activeRequests)
+Source/Core/Session.swift:259  +             action(self.mutableState.read(\.activeRequests))
+Source/Core/Session.swift:1156 -     func perform(_ request: Request) {
+Source/Core/Session.swift:1166 +     func perform(_ request: Request, forRetry isRetrying: Bool = false) {
+Source/Core/Session.swift:1158 -             guard !request.isCancelled else { return }
+Source/Core/Session.swift:1159 - 
+Source/Core/Session.swift:1160 -             self.activeRequests.insert(request)
+Source/Core/Session.swift:1161 - 
+Source/Core/Session.swift:1162 -             self.requestQueue.async {
+Source/Core/Session.swift:1163 -                 // Leaf types must come first, otherwise they will cast as their superclass.
+Source/Core/Session.swift:1164 -                 switch request {
+Source/Core/Session.swift:1165 -                 // UploadRequest must come before DataRequest due to subtype relationship.
+Source/Core/Session.swift:1166 -                 case let r as UploadRequest: self.performUploadRequest(r)
+Source/Core/Session.swift:1167 -                 case let r as DataRequest: self.performDataRequest(r)
+Source/Core/Session.swift:1168 -                 case let r as DownloadRequest: self.performDownloadRequest(r)
+Source/Core/Session.swift:1169 -                 case let r as DataStreamRequest: self.performDataStreamRequest(r)
+Source/Core/Session.swift:1170 -                 default:
+Source/Core/Session.swift:1171 -                     #if canImport(Darwin) && !canImport(FoundationNetworking)
+Source/Core/Session.swift:1172 -                     if #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *),
+Source/Core/Session.swift:1173 -                        let request = request as? WebSocketRequest {
+Source/Core/Session.swift:1174 -                         self.performWebSocketRequest(request)
+Source/Core/Session.swift:1175 -                     } else {
+Source/Core/Session.swift:1168 +             self.mutableState.write { mutableState in
+Source/Core/Session.swift:1169 +                 guard !request.isCancelled else { return }
+Source/Core/Session.swift:1170 +                 // Try to insert, only proceeding if this is the first time or we're retrying.
+Source/Core/Session.swift:1171 +                 // Protects against rapid resume -> suspend -> resume calls which may enqueue multiple performs.
+Source/Core/Session.swift:1172 +                 guard mutableState.activeRequests.insert(request).inserted || isRetrying else { return }
+Source/Core/Session.swift:1173 + 
+Source/Core/Session.swift:1174 +                 self.requestQueue.async {
+Source/Core/Session.swift:1175 +                     // Leaf types must come first, otherwise they will cast as their superclass.
+Source/Core/Session.swift:1176 +                     switch request {
+Source/Core/Session.swift:1177 +                     // UploadRequest must come before DataRequest due to subtype relationship.
+Source/Core/Session.swift:1178 +                     case let r as UploadRequest: self.performUploadRequest(r)
+Source/Core/Session.swift:1179 +                     case let r as DataRequest: self.performDataRequest(r)
+Source/Core/Session.swift:1180 +                     case let r as DownloadRequest: self.performDownloadRequest(r)
+Source/Core/Session.swift:1181 +                     case let r as DataStreamRequest: self.performDataStreamRequest(r)
+Source/Core/Session.swift:1182 +                     default:
+Source/Core/Session.swift:1183 +                         #if canImport(Darwin) && !canImport(FoundationNetworking)
+Source/Core/Session.swift:1184 +                         if #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *),
+Source/Core/Session.swift:1185 +                            let request = request as? WebSocketRequest {
+Source/Core/Session.swift:1186 +                             self.performWebSocketRequest(request)
+Source/Core/Session.swift:1187 +                         } else {
+Source/Core/Session.swift:1188 +                             fatalError("Attempted to perform unsupported Request subclass: \(type(of: request))")
+Source/Core/Session.swift:1189 +                         }
+Source/Core/Session.swift:1190 +                         #else
+Source/Core/Session.swift:1192 +                         #endif
+Source/Core/Session.swift:1178 -                     #else
+Source/Core/Session.swift:1179 -                     fatalError("Attempted to perform unsupported Request subclass: \(type(of: request))")
+Source/Core/Session.swift:1180 -                     #endif
+Source/Core/Session.swift:1286 -         requestTaskMap[request] = task
+Source/Core/Session.swift:1299 +         mutableState.write { $0.requestTaskMap[request] = task }
+Source/Core/Session.swift:1288 - 
+Source/Core/Session.swift:1289 -         updateStatesForTask(task, request: request)
+Source/Core/Session.swift:1298 -         requestTaskMap[request] = task
+Source/Core/Session.swift:1309 +         mutableState.write { $0.requestTaskMap[request] = task }
+Source/Core/Session.swift:1300 - 
+Source/Core/Session.swift:1301 -         updateStatesForTask(task, request: request)
+Source/Core/Session.swift:1302 -     }
+Source/Core/Session.swift:1303 - 
+Source/Core/Session.swift:1304 -     func updateStatesForTask(_ task: URLSessionTask, request: Request) {
+Source/Core/Session.swift:1305 -         dispatchPrecondition(condition: .onQueue(rootQueue))
+Source/Core/Session.swift:1306 - 
+Source/Core/Session.swift:1307 -         request.withState { state in
+Source/Core/Session.swift:1308 -             switch state {
+Source/Core/Session.swift:1309 -             case .initialized, .finished:
+Source/Core/Session.swift:1310 -                 // Do nothing.
+Source/Core/Session.swift:1311 -                 break
+Source/Core/Session.swift:1312 -             case .resumed:
+Source/Core/Session.swift:1313 -                 task.resume()
+Source/Core/Session.swift:1314 -                 rootQueue.async { request.didResumeTask(task) }
+Source/Core/Session.swift:1315 -             case .suspended:
+Source/Core/Session.swift:1316 -                 task.suspend()
+Source/Core/Session.swift:1317 -                 rootQueue.async { request.didSuspendTask(task) }
+Source/Core/Session.swift:1318 -             case .cancelled:
+Source/Core/Session.swift:1319 -                 // Resume to ensure metrics are gathered.
+Source/Core/Session.swift:1320 -                 task.resume()
+Source/Core/Session.swift:1321 -                 task.cancel()
+Source/Core/Session.swift:1322 -                 rootQueue.async { request.didCancelTask(task) }
+Source/Core/Session.swift:1323 -             }
+Source/Core/Session.swift:1324 -         }
+Source/Core/Session.swift:1344 - 
+Source/Core/Session.swift:1345 -     // MARK: - Invalidation
+Source/Core/Session.swift:1346 - 
+Source/Core/Session.swift:1347 -     func finishRequestsForDeinit() {
+Source/Core/Session.swift:1348 -         for request in requestTaskMap.requests {
+Source/Core/Session.swift:1349 -             rootQueue.async {
+Source/Core/Session.swift:1350 -                 request.finish(error: AFError.sessionDeinitialized)
+Source/Core/Session.swift:1351 -             }
+Source/Core/Session.swift:1352 -         }
+Source/Core/Session.swift:1353 -     }
+Source/Core/Session.swift:1366 -         rootQueue.async { [self] in
+Source/Core/Session.swift:1367 -             // TODO: Find a better condition to check.
+Source/Core/Session.swift:1368 -             // Called either when the Request is manually or automatically resumed.
+Source/Core/Session.swift:1369 -             if requestTaskMap[request] == nil {
+Source/Core/Session.swift:1370 -                 perform(request)
+Source/Core/Session.swift:1371 -             }
+Source/Core/Session.swift:1372 -         }
+Source/Core/Session.swift:1342 +         perform(request)
+Source/Core/Session.swift:1376 -         activeRequests.remove(request)
+Source/Core/Session.swift:1346 +         mutableState.write { $0.activeRequests.remove(request) }
+Source/Core/Session.swift:1401 -                 self.perform(request)
+Source/Core/Session.swift:1371 +                 self.perform(request, forRetry: true)
+Source/Core/Session.swift:1419 -         return requestTaskMap[task]
+Source/Core/Session.swift:1389 +         return mutableState.read { $0.requestTaskMap[task] }
+Source/Core/Session.swift:1425 -         let didDisassociate = requestTaskMap.disassociateIfNecessaryAfterGatheringMetricsForTask(task)
+Source/Core/Session.swift:1395 +         let completion: (() -> Void)? = mutableState.write { mutableState in
+Source/Core/Session.swift:1396 +             let didDisassociate = mutableState.requestTaskMap.disassociateIfNecessaryAfterGatheringMetricsForTask(task)
+Source/Core/Session.swift:1427 -         if didDisassociate {
+Source/Core/Session.swift:1428 -             waitingCompletions[task]?()
+Source/Core/Session.swift:1429 -             waitingCompletions[task] = nil
+Source/Core/Session.swift:1398 +             if didDisassociate {
+Source/Core/Session.swift:1399 +                 let completion = mutableState.waitingCompletions[task]
+Source/Core/Session.swift:1400 +                 mutableState.waitingCompletions[task] = nil
+Source/Core/Session.swift:1401 +                 return completion
+Source/Core/Session.swift:1402 +             } else {
+Source/Core/Session.swift:1403 +                 return nil
+Source/Core/Session.swift:1404 +             }
+Source/Core/Session.swift:1406 +         completion?()
+Source/Core/Session.swift:1436 -         let didDisassociate = requestTaskMap.disassociateIfNecessaryAfterCompletingTask(task)
+Source/Core/Session.swift:1412 +         let immediatelyPerformCompletion = mutableState.write { mutableState in
+Source/Core/Session.swift:1413 +             let didDisassociate = mutableState.requestTaskMap.disassociateIfNecessaryAfterCompletingTask(task)
+Source/Core/Session.swift:1438 -         if didDisassociate {
+Source/Core/Session.swift:1439 -             completion()
+Source/Core/Session.swift:1440 -         } else {
+Source/Core/Session.swift:1441 -             waitingCompletions[task] = completion
+Source/Core/Session.swift:1415 +             if didDisassociate {
+Source/Core/Session.swift:1416 +                 return true
+Source/Core/Session.swift:1417 +             } else {
+Source/Core/Session.swift:1418 +                 mutableState.waitingCompletions[task] = completion
+Source/Core/Session.swift:1419 +                 return false
+Source/Core/Session.swift:1420 +             }
+Source/Core/Session.swift:1422 + 
+Source/Core/Session.swift:1423 +         if immediatelyPerformCompletion { completion() }
+Source/Core/Session.swift:1448 -         return requestTaskMap[task]?.credential ??
+Source/Core/Session.swift:1429 +         return mutableState.read { $0.requestTaskMap[task]?.credential } ??
+Source/Core/Session.swift:1455 -         requestTaskMap.requests.forEach { $0.finish(error: AFError.sessionInvalidated(error: error)) }
+Source/Core/Session.swift:1436 +         let requests = mutableState.read(\.activeRequests)
+Source/Core/Session.swift:1437 +         for request in requests where !request.isFinished {
+Source/Core/Session.swift:1438 +             request.finish(error: .sessionInvalidated(error: error))
+Source/Core/Session.swift:1439 +         }
+Source/Core/SessionDelegate.swift:33   +     var sessionInvalidationCleanup = Protected<(() -> Void)?>(nil)
+Source/Core/SessionDelegate.swift:77   +         // When invalidated due to Session.deinit, stateProvider will already have dropped to nil.
+Source/Core/SessionDelegate.swift:79   + 
+Source/Core/SessionDelegate.swift:80   +         let sessionInvalidationCleanup = sessionInvalidationCleanup.write {
+Source/Core/SessionDelegate.swift:81   +             let cleanup = $0
+Source/Core/SessionDelegate.swift:82   +             $0 = nil
+Source/Core/SessionDelegate.swift:83   +             return cleanup
+Source/Core/SessionDelegate.swift:84   +         }
+Source/Core/SessionDelegate.swift:85   +         sessionInvalidationCleanup?()
+Source/Features/AuthenticationInterceptor.swift:205  +     private enum RefreshState {
+Source/Features/AuthenticationInterceptor.swift:206  +         case idle
+Source/Features/AuthenticationInterceptor.swift:207  +         case refreshing
+Source/Features/AuthenticationInterceptor.swift:208  +         case failed(any Error)
+Source/Features/AuthenticationInterceptor.swift:209  +     }
+Source/Features/AuthenticationInterceptor.swift:210  + 
+Source/Features/AuthenticationInterceptor.swift:213  +         var credentialVersion = 0
+Source/Features/AuthenticationInterceptor.swift:208  -         var isRefreshing = false
+Source/Features/AuthenticationInterceptor.swift:215  +         var refreshState: RefreshState = .idle
+Source/Features/AuthenticationInterceptor.swift:221  + 
+Source/Features/AuthenticationInterceptor.swift:222  +         var isRefreshing: Bool {
+Source/Features/AuthenticationInterceptor.swift:223  +             if case .refreshing = refreshState { return true }
+Source/Features/AuthenticationInterceptor.swift:224  +             return false
+Source/Features/AuthenticationInterceptor.swift:225  +         }
+Source/Features/AuthenticationInterceptor.swift:226  + 
+Source/Features/AuthenticationInterceptor.swift:227  +         mutating func updateCredential(_ credential: Credential?) {
+Source/Features/AuthenticationInterceptor.swift:228  +             self.credential = credential
+Source/Features/AuthenticationInterceptor.swift:229  +             credentialVersion += 1
+Source/Features/AuthenticationInterceptor.swift:230  +             refreshState = .idle
+Source/Features/AuthenticationInterceptor.swift:231  +         }
+Source/Features/AuthenticationInterceptor.swift:221  -         set { mutableState.write { $0.credential = newValue } }
+Source/Features/AuthenticationInterceptor.swift:239  +         set { mutableState.write { $0.updateCredential(newValue) } }
+Source/Features/AuthenticationInterceptor.swift:251  -             // Queue the adapt operation if a refresh is already in place.
+Source/Features/AuthenticationInterceptor.swift:252  -             guard !mutableState.isRefreshing else {
+Source/Features/AuthenticationInterceptor.swift:269  +             // Defer only when a proactive (requiresRefresh-driven) refresh is in progress. The triggering request
+Source/Features/AuthenticationInterceptor.swift:270  +             // always appends itself to adaptOperations before isRefreshing is set, so any concurrent adapt that
+Source/Features/AuthenticationInterceptor.swift:271  +             // observes isRefreshing == true also observes a non-empty queue.
+Source/Features/AuthenticationInterceptor.swift:272  +             //
+Source/Features/AuthenticationInterceptor.swift:273  +             // When adaptOperations is empty and isRefreshing is true, the refresh was triggered by the retry path. In
+Source/Features/AuthenticationInterceptor.swift:274  +             // that case, do not defer the adaptation and perform the request using the credential so the full adapter
+Source/Features/AuthenticationInterceptor.swift:275  +             // chain, including any non-idempotent adapters earlier in the chain, reruns from scratch on retry rather
+Source/Features/AuthenticationInterceptor.swift:276  +             // than replaying stale intermediate state.
+Source/Features/AuthenticationInterceptor.swift:277  +             if mutableState.isRefreshing, !mutableState.adaptOperations.isEmpty {
+Source/Features/AuthenticationInterceptor.swift:278  +                 // Refresh from requiresRefresh is running, adaptation has been deferred.
+Source/Features/AuthenticationInterceptor.swift:258  -             // Throw missing credential error is the credential is missing.
+Source/Features/AuthenticationInterceptor.swift:284  +             // Produce a missing credential error if the credential is missing.
+Source/Features/AuthenticationInterceptor.swift:264  -             // Queue the adapt operation and trigger refresh operation if credential requires refresh.
+Source/Features/AuthenticationInterceptor.swift:265  -             guard !credential.requiresRefresh else {
+Source/Features/AuthenticationInterceptor.swift:290  +             // Queue the adapt operation and trigger a proactive refresh if the credential requires it and no refresh
+Source/Features/AuthenticationInterceptor.swift:291  +             // is already in progress.
+Source/Features/AuthenticationInterceptor.swift:292  +             if credential.requiresRefresh, !mutableState.isRefreshing {
+Source/Features/AuthenticationInterceptor.swift:299  +             // A new request reaching this point represents a fresh request lifecycle. Any prior refresh failure is
+Source/Features/AuthenticationInterceptor.swift:300  +             // stale with respect to this request. Clear it so a subsequent failure can trigger a new refresh.
+Source/Features/AuthenticationInterceptor.swift:301  +             if case .failed = mutableState.refreshState {
+Source/Features/AuthenticationInterceptor.swift:302  +                 mutableState.refreshState = .idle
+Source/Features/AuthenticationInterceptor.swift:303  +             }
+Source/Features/AuthenticationInterceptor.swift:304  + 
+Source/Features/AuthenticationInterceptor.swift:306  -         guard let credential else {
+Source/Features/AuthenticationInterceptor.swift:339  +         guard let (credential, credentialVersion): (Credential, Int) = mutableState.read({ mutableState in
+Source/Features/AuthenticationInterceptor.swift:340  +             if let credential = mutableState.credential {
+Source/Features/AuthenticationInterceptor.swift:341  +                 (credential, mutableState.credentialVersion)
+Source/Features/AuthenticationInterceptor.swift:342  +             } else {
+Source/Features/AuthenticationInterceptor.swift:343  +                 nil
+Source/Features/AuthenticationInterceptor.swift:344  +             }
+Source/Features/AuthenticationInterceptor.swift:345  +         }) else {
+Source/Features/AuthenticationInterceptor.swift:318  -         mutableState.write { mutableState in
+Source/Features/AuthenticationInterceptor.swift:319  -             mutableState.requestsToRetry.append(completion)
+Source/Features/AuthenticationInterceptor.swift:320  - 
+Source/Features/AuthenticationInterceptor.swift:321  -             guard !mutableState.isRefreshing else { return }
+Source/Features/AuthenticationInterceptor.swift:322  - 
+Source/Features/AuthenticationInterceptor.swift:323  -             refresh(credential, for: session, insideLock: &mutableState)
+Source/Features/AuthenticationInterceptor.swift:357  +         // Otherwise, enqueue the completion for the end of refresh, or immediately resolve if a prior attempt already
+Source/Features/AuthenticationInterceptor.swift:358  +         // determined the outcome for this credential version.
+Source/Features/AuthenticationInterceptor.swift:359  +         let retryResult: RetryResult? = mutableState.write { mutableState in
+Source/Features/AuthenticationInterceptor.swift:360  +             guard credentialVersion == mutableState.credentialVersion else {
+Source/Features/AuthenticationInterceptor.swift:361  +                 // Credential was updated during the prechecks, so immediately retry the request with the new credential.
+Source/Features/AuthenticationInterceptor.swift:362  +                 return .retry
+Source/Features/AuthenticationInterceptor.swift:363  +             }
+Source/Features/AuthenticationInterceptor.swift:364  +             switch mutableState.refreshState {
+Source/Features/AuthenticationInterceptor.swift:365  +             case let .failed(refreshError):
+Source/Features/AuthenticationInterceptor.swift:366  +                 // A refresh was already attempted and failed for this credential version.
+Source/Features/AuthenticationInterceptor.swift:367  +                 // Do not queue and do not trigger another refresh.
+Source/Features/AuthenticationInterceptor.swift:368  +                 return .doNotRetryWithError(refreshError)
+Source/Features/AuthenticationInterceptor.swift:369  +             case .refreshing:
+Source/Features/AuthenticationInterceptor.swift:370  +                 mutableState.requestsToRetry.append(completion)
+Source/Features/AuthenticationInterceptor.swift:371  +                 return nil
+Source/Features/AuthenticationInterceptor.swift:372  +             case .idle:
+Source/Features/AuthenticationInterceptor.swift:373  +                 mutableState.requestsToRetry.append(completion)
+Source/Features/AuthenticationInterceptor.swift:374  +                 refresh(credential, for: session, insideLock: &mutableState)
+Source/Features/AuthenticationInterceptor.swift:375  +                 return nil
+Source/Features/AuthenticationInterceptor.swift:376  +             }
+Source/Features/AuthenticationInterceptor.swift:378  + 
+Source/Features/AuthenticationInterceptor.swift:379  +         if let result = retryResult { completion(result) }
+Source/Features/AuthenticationInterceptor.swift:337  -         mutableState.isRefreshing = true
+Source/Features/AuthenticationInterceptor.swift:392  +         mutableState.refreshState = .refreshing
+Source/Features/AuthenticationInterceptor.swift:368  -         mutableState.credential = credential
+Source/Features/AuthenticationInterceptor.swift:423  +         mutableState.updateCredential(credential)
+Source/Features/AuthenticationInterceptor.swift:376  -         mutableState.isRefreshing = false
+Source/Features/AuthenticationInterceptor.swift:377  - 
+Source/Features/AuthenticationInterceptor.swift:392  -         mutableState.isRefreshing = false
+Source/Features/AuthenticationInterceptor.swift:445  +         mutableState.refreshState = .failed(error)
+Source/Features/Combine.swift:25   - #if !((os(iOS) && (arch(i386) || arch(arm))) || os(Windows) || os(Linux) || os(Android))
+Source/Features/Combine.swift:25   + #if !((os(iOS) && (arch(i386) || arch(arm))) || os(Windows) || os(Linux) || os(Android) || os(FreeBSD))
+Source/Features/Concurrency.swift:363  +         defer { if shouldAutomaticallyCancel && Task.isCancelled { task.cancel() } }
+Source/Features/Concurrency.swift:364  + 
+Source/Features/Concurrency.swift:574  +         defer { if shouldAutomaticallyCancel && Task.isCancelled { task.cancel() } }
+Source/Features/Concurrency.swift:575  + 
+Source/Features/MultipartFormData.swift:214  -         #if !(os(Linux) || os(Windows) || os(Android))
+Source/Features/MultipartFormData.swift:214  +         #if !(os(Linux) || os(Windows) || os(Android) || os(FreeBSD))
+Source/Features/OfflineRetrier.swift:132  -             state.startListening { [unowned self] result in
+Source/Features/OfflineRetrier.swift:132  +             state.startListening { [weak self] result in
+Source/Features/OfflineRetrier.swift:133  +                 guard let self else { return }
+Source/Features/OfflineRetrier.swift:134  + 
+Source/Features/Validation.swift:30   -     fileprivate typealias ErrorReason = AFError.ResponseValidationFailureReason
+Source/Features/Validation.swift:30   +     typealias ErrorReason = AFError.ResponseValidationFailureReason
+Source/Features/Validation.swift:35   -     fileprivate struct MIMEType {
+Source/Features/Validation.swift:35   +     struct MIMEType {
+Source/Features/Validation.swift:49   -             if let type = components.first, let subtype = components.last {
+Source/Features/Validation.swift:49   +             if components.count == 2, let type = components.first, let subtype = components.last {
+
+378 changed lines across 13 file(s)
+
+--- line-range map (the guard against hallucinated findings) ---
+Source/Alamofire.swift: 39-43
+Source/Core/DataRequest.swift: 105-111
+Source/Core/DataStreamRequest.swift: 161-168, 183-189, 346-354, 377-385, 420-428
+Source/Core/DownloadRequest.swift: 67-73, 271-287, 398-404
+Source/Core/Request.swift: 388-424, 688-693, 719-735, 773-786
+Source/Core/Session.swift: 86-101, 233-245, 256-262, 1163-1196, 1296-1303, 1306-1313, 1327-1332, 1339-1349, 1368-1374, 1386-1441
+Source/Core/SessionDelegate.swift: 30-36, 74-88
+Source/Features/AuthenticationInterceptor.swift: 202-234, 236-242, 266-307, 336-348, 354-382, 389-395, 420-426, 428-433, 442-448
+Source/Features/Combine.swift: 22-28
+Source/Features/Concurrency.swift: 360-367, 571-578
+Source/Features/MultipartFormData.swift: 211-217
+Source/Features/OfflineRetrier.swift: 129-137
+Source/Features/Validation.swift: 27-38, 46-52
