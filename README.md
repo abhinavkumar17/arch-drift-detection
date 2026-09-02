@@ -111,6 +111,8 @@ nothing it doesn't. It does three jobs:
 
 Run against a real Alamofire PR (`git diff HEAD~5 HEAD`):
 
+https://github.com/Alamofire/Alamofire
+
 ```
 raw diff:              342 files,  4017 changed lines
 after source filter:    33 files,  2613 changed lines
