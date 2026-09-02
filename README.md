@@ -128,8 +128,6 @@ Source/Features/AuthenticationInterceptor.swift: 202-234, 236-242, 266-307, ...
 Source/Features/Validation.swift: 27-38, 46-52
 ```
 
-Verified on both a Linux container and the Windows dev machine — identical output.
-
 ### Run it
 
 ```
