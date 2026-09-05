@@ -1,0 +1,15 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\abhin\AppData\Local\Programs\Python\Python312\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\abhin\OneDrive\Documents\GitHub\Alamofire
+collecting ... collected 7 items
+
+test_annotate.py::test_deleted_lines_validate_against_their_own_numbering PASSED [ 14%]
+test_annotate.py::test_context_lines_are_not_commentable PASSED          [ 28%]
+test_annotate.py::test_side_matches_change_type PASSED                   [ 42%]
+test_annotate.py::test_counters_reset_across_hunks PASSED                [ 57%]
+test_annotate.py::test_file_tiers PASSED                                 [ 71%]
+test_annotate.py::test_findings_outside_the_diff_are_rejected PASSED     [ 85%]
+test_annotate.py::test_empty_diff PASSED                                 [100%]
+
+============================== 7 passed in 0.05s ==============================
