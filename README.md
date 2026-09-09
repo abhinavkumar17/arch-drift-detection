@@ -243,26 +243,3 @@ outside the diff being rejected, and the empty diff.
 
 ---
 
-## Open questions
-
-**1. Path-based dropping vs. a size limit.**
-The `drop` tier above is a maintained list of paths. The alternative under
-discussion is to drop nothing by name, and instead set a total line- or
-character-count limit that any file exceeding gets dropped automatically —
-dependency or real code alike. A size rule never goes stale the way a path list
-does, and it targets the thing that actually hurts (context cost) rather than a
-proxy for it.
-
-Unresolved: applied to whole files, a size rule drops large files first — and
-large files are where layering drift most often lives. Applied to *diff hunks*
-rather than files, that objection mostly disappears. Which of the two is intended
-still needs settling, along with whether the limit is per-file, a total budget,
-or both.
-
-**2. What travels alongside the diff.**
-The guidance on context budget is to fill the window rather than build an index:
-keep intake roughly 10% below the model's cap, so ~800–900k tokens for a 1M
-window. That settles *how much* but not *what*. `rgb-ios` does not fit in 900k
-even filtered. At that budget, what repo content travels with the diff, and how
-is it selected? Until that is answered, Stage 4 has a limit to enforce but no
-priority order to enforce it with.
