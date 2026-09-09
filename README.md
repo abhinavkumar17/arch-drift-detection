@@ -53,24 +53,66 @@ that Stage 2 fetched, because Stage 2 does not exist yet.
 
 ---
 
-## Why Lambda *and* Fargate
+## Architecture Proposal, GitHub Webhook Handler
 
-Lambda is cheap, always warm, and answers GitHub instantly — but it caps at 15
-minutes and limited memory, so it cannot clone a large repo. Fargate has no
-runtime limit but costs money when idle.
+### Objective
 
-Pairing them gets both: Lambda receives and triggers, Fargate does the lifting
-on demand and tears itself down. Both on AWS, so there is one stack to deploy,
-monitor and reason about.
+The goal is to build a webhook handler that detects GitHub pull request events.
+When a new pull request is created, GitHub fires a webhook event to our handler.
+This is the foundation for a later pipeline that will clone the repository, check
+out the pull request branch, and analyze the code changes.
 
-*(Cloudflare Workers was the alternative considered for the webhook handler.
-Rejected: constrained runtime, and it would have split the system across two
-vendors.)*
+This proposal focuses only on steps one and two, receiving and detecting the pull
+request event. The heavier steps, cloning the repository and annotating the
+difference, are intentionally deferred and noted in the recommendation.
+
+### The Two Options
+
+#### Option One, Cloudflare Workers
+
+Cloudflare Workers is a lightweight serverless platform that runs small pieces of
+code instantly when triggered. It scales to zero, meaning you pay nothing when
+idle, and it offers a genuinely free tier of one hundred thousand requests per
+day. It is ideal for receiving a webhook and reacting quickly. Its limitation is a
+constrained runtime and short execution time, so it cannot clone large
+repositories in process.
+
+#### Option Two, AWS Fargate
+
+AWS Fargate runs full containers with no runtime limits, so it can clone
+repositories and perform heavy work. Used as a long-running service it costs money
+when idle, but paired with AWS Lambda as a trigger it can be run as an on-demand
+task. Lambda receives the event, spins up a Fargate task for that job, and the
+task tears itself down when finished. This means paying only for the compute
+minutes actually used.
+
+### Recommendation
+
+The recommended approach is to consolidate on a single stack, AWS. An AWS Lambda
+function receives the GitHub webhook event. When heavier work is needed, Lambda
+spins up an on-demand Fargate task that clones the repository and runs the analysis
+pipeline, then tears itself down. Keeping the webhook handler and the compute layer
+on the same platform avoids splitting across two vendors, which simplifies
+deployment, monitoring, and reasoning about the system.
+
+### How It Connects
+
+1. A pull request is opened on GitHub.
+2. GitHub fires a webhook event to our handler's URL.
+3. An AWS Lambda function receives the event and validates it.
+4. Lambda extracts the key details, such as pull request number, author, and branch.
+5. Lambda logs the event. In a later phase, it spins up an on-demand Fargate task for heavier processing.
+
+### Next Steps
+
+1. Set up an AWS Lambda function and deploy a basic handler that receives the webhook and prints it to the console.
+2. Register the webhook in the GitHub repository settings, pointing to the Lambda's URL, and subscribe to pull request events.
+3. Verify the flow by opening a test pull request and confirming Lambda receives and logs the event.
+4. In a later phase, add on-demand Fargate task handoff for cloning and diff analysis.
 
 ---
 
-## Stage 3 — the annotation pass 
-The test is dome only in local to check how it will be handled at fargate 
+## Stage 3 — the annotation pass (Done locally for now)
 
 `annotate.py` turns a raw unified diff into exactly what the model needs, and
 nothing it doesn't. Three jobs.
