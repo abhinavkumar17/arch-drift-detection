@@ -133,44 +133,15 @@ Both problems have the same consequence. Without a per-line address that include
 its side, a finding cannot become a comment.
 
 
-| Tag      | Change    | Numbered against | GitHub side         |
-| -------- | --------- | ---------------- | ------------------- |
-| `NEW:L#` | added     | the new file     | RIGHT               |
-| `OLD:L#` | deleted   | the old file     | LEFT                |
-| `CTX:L#` | unchanged | the new file     | — (not commentable) |
+### The fix
 
-Context lines are **kept**, not dropped, so the model can read around a change.
-They cost tokens but nothing in correctness, since they never enter the
-allow-list.
+`annotate.py` addresses both problems in a single pass over the diff. It does
+three jobs.
 
-Counting is delegated to the `unidiff` library rather than hand-parsed. Each
-`@@` header resets both counters, and getting that wrong by hand is the easiest
-way to produce addresses that look right and point nowhere.
+### 1. Address every line
 
-### 2. Sort files into tiers
-
-Not every file worth reading is worth commenting on, so read and comment are
-separate permissions. `file_tier()` sorts each path into one of three buckets:
-
-| Tier      | Files                                                                                | Treatment                      |
-| --------- | ------------------------------------------------------------------------------------ | ------------------------------ |
-| `comment` | production `.swift`, `.kt`, `.kts`                                                   | model may read **and** comment |
-| `context` | tests, `.md`, `.yml`, `.yaml`, `.json`                                               | model may read, never comment  |
-| `drop`    | lockfiles, `Pods/`, `vendor/`, `build/`, `generated/`, `.min.*`, `.pbxproj`, `docs/` | never sent                     |
-
-Tests sit in the middle tier deliberately. A test reaching into an internal it
-has no business knowing about is one of the stronger drift signals available —
-dropping tests loses that signal, while letting the model comment on them
-produces noise. Read-only is the right setting.
-
-Anything in `drop` cannot violate a layering rule, so sending it buys nothing.
-This is where the token saving comes from: not smarter parsing, just not sending
-files that can't be wrong.
-
-### 3. Build the allow-list
-
-The same pass that numbers the lines also records which of them a comment may be
-posted on — per file, **split by side**:
+Every line the model sees carries a tag: which file it belongs to, its line
+number, and which side that number is counted against.
 
 ## Evidence
 
