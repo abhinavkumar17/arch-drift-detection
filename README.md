@@ -223,7 +223,4 @@ python -m pytest test_annotate.py -v > test-run.txt
 Stage 3's correctness can be verified today, while the stages around it are
 still unbuilt.
 
----
-
----
 
