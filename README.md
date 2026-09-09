@@ -217,40 +217,15 @@ python annotate.py pr.diff > annotation-run.txt
 python -m pytest test_annotate.py -v > test-run.txt
 ```
 
-Two things that will bite you. Make test diffs with `git diff`, never by hand —
-hand-written diffs have wrong hunk headers and `unidiff` rejects them outright.
-And on Windows, `main()` sets `sys.stdout` to UTF-8, so an emoji anywhere in the
-diff doesn't kill the run.
-
 ### Tests
 
 `test_annotate.py` runs on diff strings alone — no AWS, no GitHub, no model. So
 Stage 3's correctness can be verified today, while the stages around it are
 still unbuilt.
 
-Seven tests, covering:
-
-- deleted lines validating against their own numbering (the regression above)
-- context lines reaching the model but never the allow-list
-- side matching change type
-- counters resetting across `@@` boundaries
-- file tiering
-- findings pointing outside the diff being rejected
-- the empty diff
-
 ---
 
-## Design notes
-
-- **The diff is used twice.** Once as the model's input, once as the ground truth
-  its output is checked against. Built by the same pass, so the two cannot
-  disagree about line numbers.
-- **Read and comment are separate permissions.** What the model may look at is a
-  wider set than what it may write on. Collapsing the two either loses signal or
-  creates noise.
-- **Diff-only, for now.** The reviewer sees changed lines and their surrounding
-  context, not the whole repo — so it catches drift as it arrives, not
-  pre-existing drift.
+\
 
 ---
 
