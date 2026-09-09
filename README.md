@@ -69,7 +69,8 @@ vendors.)*
 
 ---
 
-## Stage 3 — the annotation pass ✅
+## Stage 3 — the annotation pass 
+The test is dome only in local to check how it will be handled at fargate 
 
 `annotate.py` turns a raw unified diff into exactly what the model needs, and
 nothing it doesn't. Three jobs.
