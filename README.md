@@ -132,23 +132,6 @@ side, `LEFT` for the old file or `RIGHT` for the new.
 Both problems have the same consequence. Without a per-line address that includes
 its side, a finding cannot become a comment.
 
-`annotate.py` turns a raw unified diff into exactly what the model needs, and
-nothing it doesn't. Three jobs.
-
-### 1. Address every line
-
-A diff marks lines `+` / `-` but never numbers them. The model can spot a problem
-and still have no way to say *where* it lives — so the finding can't be placed as
-a comment. The tags are the addressing scheme:
-
-```
-[NEW:L11] +     private let apiClient = NetworkLayer.APIClient()
-[OLD:L14] -     private var legacyCache = [String: Any]()
-[CTX:L12]       override func viewDidLoad() {
-```
-
-Two numbering systems run over the same file at once, so the side is not
-optional — a bare line number is ambiguous:
 
 | Tag      | Change    | Numbered against | GitHub side         |
 | -------- | --------- | ---------------- | ------------------- |
@@ -158,47 +141,36 @@ optional — a bare line number is ambiguous:
 
 Context lines are **kept**, not dropped, so the model can read around a change.
 They cost tokens but nothing in correctness, since they never enter the
-allow-list. Line-counting is delegated to the `unidiff` library rather than
-hand-parsed, so each `@@` header resets both counters correctly.
+allow-list.
 
-### 2. Filter in two tiers
+Counting is delegated to the `unidiff` library rather than hand-parsed. Each
+`@@` header resets both counters, and getting that wrong by hand is the easiest
+way to produce addresses that look right and point nowhere.
 
-Not every file worth reading is worth commenting on. `file_tier()` sorts each
-path into one of three buckets:
+### 2. Sort files into tiers
 
-| Tier      | Files                                                                     | Treatment                      |
-| --------- | ------------------------------------------------------------------------- | ------------------------------ |
-| `comment` | production `.swift`, `.kt`, `.kts`                                        | model may read **and** comment |
-| `context` | tests, `.md`, `.yml`, `.yaml`, `.json`                                    | model may read, never comment  |
+Not every file worth reading is worth commenting on, so read and comment are
+separate permissions. `file_tier()` sorts each path into one of three buckets:
+
+| Tier      | Files                                                                                | Treatment                      |
+| --------- | ------------------------------------------------------------------------------------ | ------------------------------ |
+| `comment` | production `.swift`, `.kt`, `.kts`                                                   | model may read **and** comment |
+| `context` | tests, `.md`, `.yml`, `.yaml`, `.json`                                               | model may read, never comment  |
 | `drop`    | lockfiles, `Pods/`, `vendor/`, `build/`, `generated/`, `.min.*`, `.pbxproj`, `docs/` | never sent                     |
 
-Tests earn the middle tier deliberately: a test reaching into an internal it has
-no business knowing about is one of the stronger drift signals available.
-Dropping them loses that signal; letting the model comment on them produces
-noise. Read-only is the right setting.
+Tests sit in the middle tier deliberately. A test reaching into an internal it
+has no business knowing about is one of the stronger drift signals available —
+dropping tests loses that signal, while letting the model comment on them
+produces noise. Read-only is the right setting.
+
+Anything in `drop` cannot violate a layering rule, so sending it buys nothing.
+This is where the token saving comes from: not smarter parsing, just not sending
+files that can't be wrong.
 
 ### 3. Build the allow-list
 
-`allow_list()` produces, per file, the exact set of line numbers a comment may be
-posted on — **split by side**:
-
-```
-{"Source/Core/Session.swift": {"LEFT": {89, 90, ...}, "RIGHT": {89, 90, ...}}}
-```
-
-`is_in_diff(path, line, side, allowed)` is the guard. Every finding the model
-returns goes through it; anything pointing outside the set is dropped before it
-becomes a PR comment.
-
-It is built from the annotated lines themselves, **not** from hunk headers. That
-matters, and it is where the previous version was wrong: hunk headers carry
-new-file numbering, while deleted lines carry old-file numbering. The old guard
-compared one against the other. On a synthetic diff it annotated 16 deleted lines
-and its own guard rejected 11 of them — and in the other direction accepted 11
-unchanged lines as commentable. Building the allow-list from the same pass that
-numbered the lines makes that class of mismatch impossible.
-
----
+The same pass that numbers the lines also records which of them a comment may be
+posted on — per file, **split by side**:
 
 ## Evidence
 
