@@ -205,7 +205,9 @@ lines and its own guard rejected 11 of them, while in the other direction it
 accepted 11 unchanged lines as commentable. Building the allow-list from the
 pass that numbered the lines makes that class of mismatch impossible.
 
-### Run it
+### Reproduce it
+
+Everything under `evidence/` can be regenerated from scratch:
 
 ```
 pip install unidiff pytest
@@ -215,17 +217,26 @@ python annotate.py pr.diff > annotation-run.txt
 python -m pytest test_annotate.py -v > test-run.txt
 ```
 
-Make test diffs with `git diff`, never by hand — hand-written diffs have wrong
-hunk headers and `unidiff` rejects them. On Windows, `main()` sets `sys.stdout`
-to UTF-8 so an emoji in the diff doesn't fail the run.
+Two things that will bite you. Make test diffs with `git diff`, never by hand —
+hand-written diffs have wrong hunk headers and `unidiff` rejects them outright.
+And on Windows, `main()` sets `sys.stdout` to UTF-8, so an emoji anywhere in the
+diff doesn't kill the run.
 
 ### Tests
 
-`test_annotate.py` runs on diff strings alone — no AWS, no GitHub, no model. It
-covers: deleted lines validating against their own numbering (the regression
-above), context lines reaching the model but never the allow-list, side matching
-change type, counters resetting across `@@` boundaries, file tiering, findings
-outside the diff being rejected, and the empty diff.
+`test_annotate.py` runs on diff strings alone — no AWS, no GitHub, no model. So
+Stage 3's correctness can be verified today, while the stages around it are
+still unbuilt.
+
+Seven tests, covering:
+
+- deleted lines validating against their own numbering (the regression above)
+- context lines reaching the model but never the allow-list
+- side matching change type
+- counters resetting across `@@` boundaries
+- file tiering
+- findings pointing outside the diff being rejected
+- the empty diff
 
 ---
 
