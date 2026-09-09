@@ -114,6 +114,24 @@ deployment, monitoring, and reasoning about the system.
 
 ## Stage 3 — the annotation pass (Done locally for now)
 
+### The problem
+
+A unified diff is not addressable. It carries line numbers only in its `@@` hunk
+headers — "starting at line 89, twelve lines" — while the individual lines
+beneath them are unnumbered. A model reading it can see the code perfectly well
+and still have no way to say *where* a problem lives. To cite a location it would
+have to count lines down from the header, which models do unreliably.
+
+Underneath that sits a second problem. A diff describes two versions of a file at
+once: the file before the change and the file after. A deleted line has a
+position in the old file; an added line has a position in the new one. So a bare
+line number is ambiguous — old-file 40 and new-file 40 are different places.
+GitHub's comment API reflects this directly: it will not accept a line without a
+side, `LEFT` for the old file or `RIGHT` for the new.
+
+Both problems have the same consequence. Without a per-line address that includes
+its side, a finding cannot become a comment.
+
 `annotate.py` turns a raw unified diff into exactly what the model needs, and
 nothing it doesn't. Three jobs.
 
