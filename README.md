@@ -26,7 +26,7 @@ memory-limited by design.
 
 **3. Fargate collects the diff.** The task authenticates with a GitHub PAT,
 clones the repo, checks out the PR branch, and produces the unified diff itself.
-This is why Fargate exists: cloning a repo the size of `rgb-ios` would exceed
+This is why Fargate exists: cloning a repo the size that would exceed
 Lambda's limits.
 
 **4. `annotate.py` prepares it for the model.** The diff is addressed, filtered,
