@@ -143,36 +143,67 @@ three jobs.
 Every line the model sees carries a tag: which file it belongs to, its line
 number, and which side that number is counted against.
 
-## Evidence
-
-Run against a real Alamofire diff, checked in under `evidence/`:
-<https://github.com/Alamofire/Alamofire>
-
 ```
-after filtering:   36 files
-                 2713 changed lines   ← commentable + readable
-                 3342 context lines   ← readable only
+[NEW:L11] +     private let apiClient = NetworkLayer.APIClient()
+[OLD:L14] -     private var legacyCache = [String: Any]()
+[CTX:L12]       override func viewDidLoad() {
 ```
 
-Sample of the resulting allow-list. Note `Session.swift`: deleted lines run to
-1455 while added lines stop at 1439 — the two numbering systems, side by side in
-one file. This is exactly the gap a range-based guard falls into.
+| Tag      | Change    | Numbered against | GitHub side         |
+| -------- | --------- | ---------------- | ------------------- |
+| `NEW:L#` | added     | the new file     | RIGHT               |
+| `OLD:L#` | deleted   | the old file     | LEFT                |
+| `CTX:L#` | unchanged | the new file     | — (not commentable) |
+
+Context lines are **kept**, not dropped, so the model can read around a change.
+They cost tokens but nothing in correctness, since they never enter the
+allow-list.
+
+Counting is delegated to the `unidiff` library rather than hand-parsed. Each
+`@@` header resets both counters, and getting that wrong by hand is the easiest
+way to produce addresses that look right and point nowhere.
+
+### 2. Sort files into tiers
+
+Not every file worth reading is worth commenting on, so read and comment are
+separate permissions. `file_tier()` sorts each path into one of three buckets:
+
+| Tier      | Files                                                                                | Treatment                      |
+| --------- | ------------------------------------------------------------------------------------ | ------------------------------ |
+| `comment` | production `.swift`, `.kt`, `.kts`                                                   | model may read **and** comment |
+| `context` | tests, `.md`, `.yml`, `.yaml`, `.json`                                               | model may read, never comment  |
+| `drop`    | lockfiles, `Pods/`, `vendor/`, `build/`, `generated/`, `.min.*`, `.pbxproj`, `docs/` | never sent                     |
+
+Tests sit in the middle tier deliberately. A test reaching into an internal it
+has no business knowing about is one of the stronger drift signals available —
+dropping tests loses that signal, while letting the model comment on them
+produces noise. Read-only is the right setting.
+
+Anything in `drop` cannot violate a layering rule, so sending it buys nothing.
+This is where the token saving comes from: not smarter parsing, just not sending
+files that can't be wrong.
+
+### 3. Build the allow-list
+
+The same pass that numbers the lines also records which of them a comment may be
+posted on — per file, **split by side**:
 
 ```
-Source/Core/Session.swift
-    LEFT  (deleted): 89, 90, ... 1448, 1455
-    RIGHT (added):   89, 90, ... 1438, 1439
-
-Source/Core/DataRequest.swift
-    LEFT  (deleted): 108, 109, 110, 111
-    RIGHT (added):   108
+{"Source/Core/Session.swift": {"LEFT": {89, 90, ...}, "RIGHT": {89, 90, ...}}}
 ```
 
-| File in `evidence/`  | What it is                                |
-| -------------------- | ----------------------------------------- |
-| `pr.diff`            | the input — regenerate the rest from this |
-| `annotation-run.txt` | full annotated output plus the allow-list |
-| `test-run.txt`       | 7 passing tests                           |
+`is_in_diff(path, line, side, allowed)` is the guard. Every finding the model
+returns goes through it, and anything pointing outside the set is dropped before
+it becomes a PR comment. That covers both a model inventing a location and a
+model commenting on a file it was only allowed to read.
+
+It is built from the annotated lines themselves, **not** from hunk headers —
+and that is where the previous version was wrong. Hunk headers carry new-file
+numbering while deleted lines carry old-file numbering, so the old guard was
+comparing one against the other. On a synthetic diff it annotated 16 deleted
+lines and its own guard rejected 11 of them, while in the other direction it
+accepted 11 unchanged lines as commentable. Building the allow-list from the
+pass that numbered the lines makes that class of mismatch impossible.
 
 ### Run it
 
