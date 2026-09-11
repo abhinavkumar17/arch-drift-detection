@@ -235,30 +235,12 @@ Tokens are estimated by character count, not by a tokenizer library:
 tokens = ceil(len(text) / 3.0)
 ```
 
-Three characters per token is deliberately pessimistic — real code runs nearer
-3.3–3.6 — so the estimate overshoots and the 20% reserve absorbs the error. That
-is the entire counter, and it carries no dependency.
-
 ### How packing works
 
 `pack.py` walks the annotated file blocks in order, costs each one, and adds it
 to the payload while the running total stays under budget. Every decision is
 logged: path, tier, characters, tokens, running total, and status. That log is
 the evidence artefact, written to `evidence/pack-run.txt`.
-
-Two behaviours are parameters rather than baked-in assumptions, because the right
-answer depends on the repo:
-
-| Parameter     | Options                                                                     |
-| ------------- | --------------------------------------------------------------------------- |
-| `order`       | `None` — GitHub's diff order · a sort key, e.g. commentable source first     |
-| `on_overflow` | `"stop"` — halt at the first file that doesn't fit · `"skip"` — keep trying  |
-
-These matter only when the budget actually binds, but then they decide everything
-that survives. On a 5-file test diff forced to a 150-token budget, the three
-configurations produced three different sets of survivors — with `"stop"` and
-diff order, the only commentable source file was never reached; with source-first
-ordering it survived. **Walk order is still an open question.**
 
 ### What a real diff looks like
 
@@ -280,14 +262,6 @@ The guard never fired. The composition is the more interesting result:
 | **`comment` tier (total)**     | **8** | **4,014** | **2.5%** |
 
 So 97.5% of what the model reads, it cannot comment on. That is by design.
-
-**Open question: duplicates.** `docs/docsets/…/Documents/` is a byte-for-byte
-copy of `docs/` — the Xcode offline docset. All 149 mirrored pairs have identical
-changed lines, costing 70,045 tokens (43% of the payload) to send the same
-content twice. Redundancy is not the same as relevance: dropping an exact
-duplicate needs no category list and no guess about what matters. Whether
-content-level dedup sits inside or outside the no-filter rule is worth deciding
-before this runs on a large repo.
 
 ---
 
