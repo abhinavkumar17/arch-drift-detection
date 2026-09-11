@@ -1,0 +1,394 @@
+budget: 800,000 tokens (80% of 1,000,000) at 3.0 chars/token
+file                                                       tier         chars   tokens      total  status
+.github/PULL_REQUEST_TEMPLATE.md                           context        387      129        129  ok
+.github/workflows/ci.yml                                   context     36,058   12,020     12,149  ok
+.ruby-version                                              context         88       30     12,179  ok
+.swiftformat                                               context      1,108      370     12,549  ok
+Alamofire.podspec                                          context        370      124     12,673  ok
+Alamofire.xcodeproj/project.pbxproj                        context     39,247   13,083     25,756  ok
+Alamofire.xcodeproj/xcshareddata/xcschemes/Alamofire iOS.xcscheme context      1,447      483     26,239  ok
+Alamofire.xcodeproj/xcshareddata/xcschemes/Alamofire macOS.xcscheme context      1,277      426     26,665  ok
+Alamofire.xcodeproj/xcshareddata/xcschemes/Alamofire tvOS.xcscheme context      1,451      484     27,149  ok
+Alamofire.xcodeproj/xcshareddata/xcschemes/Alamofire visionOS.xcscheme context        389      130     27,279  ok
+Alamofire.xcodeproj/xcshareddata/xcschemes/Alamofire watchOS.xcscheme context      1,283      428     27,707  ok
+CHANGELOG.md                                               context     13,484    4,495     32,202  ok
+CONTRIBUTING.md                                            context      5,927    1,976     34,178  ok
+Documentation/AdvancedUsage.md                             context      1,574      525     34,703  ok
+Documentation/Usage.md                                     context      2,918      973     35,676  ok
+Example/iOS Example.xcodeproj/project.pbxproj              context      4,754    1,585     37,261  ok
+Example/iOS Example.xcodeproj/xcshareddata/xcschemes/iOS Example.xcscheme context        785      262     37,523  ok
+Gemfile                                                    context        323      108     37,631  ok
+Gemfile.lock                                               context     11,871    3,957     41,588  ok
+Package.swift                                              comment      1,440      480     42,068  ok
+Package@swift-6.0.swift                                    comment      1,276      426     42,494  ok
+Package@swift-6.1.swift                                    comment      1,713      571     43,065  ok
+Package@swift-6.2.swift                                    comment      3,799    1,267     44,332  ok
+Package@swift-6.3.swift                                    comment      3,809    1,270     45,602  ok
+README.md                                                  context      1,789      597     46,199  ok
+Source/Alamofire.swift                                     comment        778      260     46,459  ok
+Source/Core/AFError.swift                                  comment        666      222     46,681  ok
+Source/Core/DataRequest.swift                              comment      2,469      823     47,504  ok
+Source/Core/DataStreamRequest.swift                        comment      5,036    1,679     49,183  ok
+Source/Core/DownloadRequest.swift                          comment      7,634    2,545     51,728  ok
+Source/Core/Instant.swift                                  comment      3,103    1,035     52,763  ok
+Source/Core/Request.swift                                  comment     23,901    7,967     60,730  ok
+Source/Core/RequestTaskMap.swift                           comment        931      311     61,041  ok
+Source/Core/Session.swift                                  comment     80,972   26,991     88,032  ok
+Source/Core/SessionDelegate.swift                          comment      3,354    1,118     89,150  ok
+Source/Core/UploadRequest.swift                            comment      3,687    1,229     90,379  ok
+Source/Core/WebSocketRequest.swift                         comment        818      273     90,652  ok
+Source/Features/AuthenticationInterceptor.swift            comment     11,164    3,722     94,374  ok
+Source/Features/Combine.swift                              comment        396      132     94,506  ok
+Source/Features/Concurrency.swift                          comment      3,115    1,039     95,545  ok
+Source/Features/EventMonitor.swift                         comment      2,931      977     96,522  ok
+Source/Features/MultipartFormData.swift                    comment        536      179     96,701  ok
+Source/Features/OfflineRetrier.swift                       comment        542      181     96,882  ok
+Source/Features/RetryPolicy.swift                          comment        661      221     97,103  ok
+Source/Features/URLEncodedFormEncoder.swift                comment      4,790    1,597     98,700  ok
+Source/Features/Validation.swift                           comment      1,156      386     99,086  ok
+Source/PrivacyInfo.xcprivacy                               context        653      218     99,304  ok
+Tests/AuthenticationInterceptorTests.swift                 context    116,691   38,897    138,201  ok
+Tests/CacheTests.swift                                     context        452      151    138,352  ok
+Tests/CombineTests.swift                                   context     43,538   14,513    152,865  ok
+Tests/ConcurrencyTests.swift                               context     10,119    3,373    156,238  ok
+Tests/DataStreamTests.swift                                context     17,713    5,905    162,143  ok
+Tests/DispatchQueue+AlamofireTests.swift                   context      2,056      686    162,829  ok
+Tests/DownloadTests.swift                                  context     42,434   14,145    176,974  ok
+Tests/InspectorEventMonitor.swift                          context     12,636    4,212    181,186  ok
+Tests/InstantTests.swift                                   context      3,300    1,100    182,286  ok
+Tests/LeaksTests.swift                                     context      2,879      960    183,246  ok
+Tests/MIMETypeTests.swift                                  context      7,840    2,614    185,860  ok
+Tests/MultipartFormDataTests.swift                         context     14,191    4,731    190,591  ok
+Tests/NSLoggingEventMonitor.swift                          context        476      159    190,750  ok
+Tests/OfflineRetrierTests.swift                            context      5,316    1,772    192,522  ok
+Tests/ProtectedTests.swift                                 context        251       84    192,606  ok
+Tests/RequestInterceptorTests.swift                        context     41,295   13,765    206,371  ok
+Tests/RequestModifierTests.swift                           context      5,508    1,836    208,207  ok
+Tests/RequestTests.swift                                   context     56,351   18,784    226,991  ok
+Tests/ResponseSerializationTests.swift                     context      1,459      487    227,478  ok
+Tests/ResponseTests.swift                                  context     18,043    6,015    233,493  ok
+Tests/RetryPolicyTests.swift                               context      1,080      360    233,853  ok
+Tests/ServerTrustEvaluatorTests.swift                      context      3,463    1,155    235,008  ok
+Tests/SessionTests.swift                                   context     36,190   12,064    247,072  ok
+Tests/TLSEvaluationTests.swift                             context     14,922    4,974    252,046  ok
+Tests/Test Plans/iOS.xctestplan                            context        343      115    252,161  ok
+Tests/Test Plans/macOS.xctestplan                          context        385      129    252,290  ok
+Tests/TestHelpers.swift                                    context     11,353    3,785    256,075  ok
+Tests/URLProtocolTests.swift                               context      2,475      825    256,900  ok
+Tests/UploadTests.swift                                    context     25,917    8,639    265,539  ok
+Tests/ValidationTests.swift                                context     24,042    8,014    273,553  ok
+Tests/WebSocketTests.swift                                 context        856      286    273,839  ok
+docs/Classes.html                                          context      9,100    3,034    276,873  ok
+docs/Classes/Adapter.html                                  context      3,551    1,184    278,057  ok
+docs/Classes/AlamofireNotifications.html                   context      3,566    1,189    279,246  ok
+docs/Classes/AuthenticationInterceptor.html                context      3,569    1,190    280,436  ok
+docs/Classes/AuthenticationInterceptor/RefreshWindow.html  context      3,613    1,205    281,641  ok
+docs/Classes/ClosureEventMonitor.html                      context      3,563    1,188    282,829  ok
+docs/Classes/CompositeEventMonitor.html                    context      5,847    1,949    284,778  ok
+docs/Classes/CompositeTrustEvaluator.html                  context      3,567    1,189    285,967  ok
+docs/Classes/ConnectionLostRetryPolicy.html                context      3,569    1,190    287,157  ok
+docs/Classes/DataRequest.html                              context      3,555    1,185    288,342  ok
+docs/Classes/DataResponseSerializer.html                   context      3,566    1,189    289,531  ok
+docs/Classes/DataStreamRequest.html                        context      3,561    1,187    290,718  ok
+docs/Classes/DataStreamRequest/CancellationToken.html      context      3,609    1,203    291,921  ok
+docs/Classes/DataStreamRequest/Completion.html             context      3,602    1,201    293,122  ok
+docs/Classes/DataStreamRequest/Event.html                  context      3,597    1,199    294,321  ok
+docs/Classes/DataStreamRequest/Stream.html                 context      3,598    1,200    295,521  ok
+docs/Classes/DecodableResponseSerializer.html              context      3,571    1,191    296,712  ok
+docs/Classes/DefaultTrustEvaluator.html                    context      3,565    1,189    297,901  ok
+docs/Classes/DisabledTrustEvaluator.html                   context      3,566    1,189    299,090  ok
+docs/Classes/DownloadRequest.html                          context      3,559    1,187    300,277  ok
+docs/Classes/DownloadRequest/Downloadable.html             context      3,602    1,201    301,478  ok
+docs/Classes/DownloadRequest/Options.html                  context      3,597    1,199    302,677  ok
+docs/Classes/Interceptor.html                              context      3,555    1,185    303,862  ok
+docs/Classes/JSONParameterEncoder.html                     context      3,564    1,188    305,050  ok
+docs/Classes/JSONResponseSerializer.html                   context      3,566    1,189    306,239  ok
+docs/Classes/MultipartFormData.html                        context      3,561    1,187    307,426  ok
+docs/Classes/NetworkReachabilityManager.html               context      7,431    2,477    309,903  ok
+docs/Classes/NetworkReachabilityManager/NetworkReachabilityStatus.html context      4,754    1,585    311,488  ok
+docs/Classes/NetworkReachabilityManager/NetworkReachabilityStatus/ConnectionType.html context      3,671    1,224    312,712  ok
+docs/Classes/OfflineRetrier.html                           context     70,648   23,550    336,262  ok
+docs/Classes/PinnedCertificatesTrustEvaluator.html         context      3,576    1,192    337,454  ok
+docs/Classes/PublicKeysTrustEvaluator.html                 context      3,568    1,190    338,644  ok
+docs/Classes/Request.html                                  context     23,161    7,721    346,365  ok
+docs/Classes/Request/ResponseDisposition.html              context      3,601    1,201    347,566  ok
+docs/Classes/Request/State.html                            context      3,587    1,196    348,762  ok
+docs/Classes/Retrier.html                                  context      3,551    1,184    349,946  ok
+docs/Classes/RetryPolicy.html                              context      5,147    1,716    351,662  ok
+docs/Classes/RevocationTrustEvaluator.html                 context      3,568    1,190    352,852  ok
+docs/Classes/RevocationTrustEvaluator/Options.html         context      3,606    1,202    354,054  ok
+docs/Classes/ServerTrustManager.html                       context      3,562    1,188    355,242  ok
+docs/Classes/Session.html                                  context    130,910   43,637    398,879  ok
+docs/Classes/Session/RequestSetup.html                     context     46,597   15,533    414,412  ok
+docs/Classes/SessionDelegate.html                          context      3,559    1,187    415,599  ok
+docs/Classes/StringResponseSerializer.html                 context      3,568    1,190    416,789  ok
+docs/Classes/URLEncodedFormEncoder.html                    context      3,565    1,189    417,978  ok
+docs/Classes/URLEncodedFormEncoder/ArrayEncoding.html      context      3,609    1,203    419,181  ok
+docs/Classes/URLEncodedFormEncoder/BoolEncoding.html       context      3,608    1,203    420,384  ok
+docs/Classes/URLEncodedFormEncoder/DataEncoding.html       context      3,608    1,203    421,587  ok
+docs/Classes/URLEncodedFormEncoder/DateEncoding.html       context      3,608    1,203    422,790  ok
+docs/Classes/URLEncodedFormEncoder/Error.html              context      3,601    1,201    423,991  ok
+docs/Classes/URLEncodedFormEncoder/KeyEncoding.html        context      3,607    1,203    425,194  ok
+docs/Classes/URLEncodedFormEncoder/KeyPathEncoding.html    context      3,611    1,204    426,398  ok
+docs/Classes/URLEncodedFormEncoder/NilEncoding.html        context      3,607    1,203    427,601  ok
+docs/Classes/URLEncodedFormEncoder/SpaceEncoding.html      context      3,609    1,203    428,804  ok
+docs/Classes/URLEncodedFormParameterEncoder.html           context      3,574    1,192    429,996  ok
+docs/Classes/URLEncodedFormParameterEncoder/Destination.html context      3,616    1,206    431,202  ok
+docs/Classes/UploadRequest.html                            context      3,557    1,186    432,388  ok
+docs/Classes/UploadRequest/Uploadable.html                 context      3,598    1,200    433,588  ok
+docs/Enums.html                                            context      3,511    1,171    434,759  ok
+docs/Enums/AFError.html                                    context      3,549    1,183    435,942  ok
+docs/Enums/AFError/MultipartEncodingFailureReason.html     context      3,610    1,204    437,146  ok
+docs/Enums/AFError/ParameterEncoderFailureReason.html      context      3,609    1,203    438,349  ok
+docs/Enums/AFError/ParameterEncoderFailureReason/RequiredComponent.html context      3,657    1,219    439,568  ok
+docs/Enums/AFError/ParameterEncodingFailureReason.html     context      3,610    1,204    440,772  ok
+docs/Enums/AFError/ResponseSerializationFailureReason.html context      3,614    1,205    441,977  ok
+docs/Enums/AFError/ResponseValidationFailureReason.html    context      3,611    1,204    443,181  ok
+docs/Enums/AFError/ServerTrustFailureReason.html           context      3,604    1,202    444,383  ok
+docs/Enums/AFError/ServerTrustFailureReason/Output.html    context      3,641    1,214    445,597  ok
+docs/Enums/AFError/URLRequestValidationFailureReason.html  context      3,613    1,205    446,802  ok
+docs/Enums/AFError/UnexpectedInputStreamLength.html        context      3,607    1,203    448,005  ok
+docs/Enums/AFInfo.html                                     context      3,548    1,183    449,188  ok
+docs/Enums/AuthenticationError.html                        context      3,561    1,187    450,375  ok
+docs/Enums/RetryResult.html                                context      3,553    1,185    451,560  ok
+docs/Extensions.html                                       context      4,747    1,583    453,143  ok
+docs/Extensions/CharacterSet.html                          context      3,559    1,187    454,330  ok
+docs/Extensions/Error.html                                 context      5,592    1,864    456,194  ok
+docs/Extensions/HTTPURLResponse.html                       context      3,562    1,188    457,382  ok
+docs/Extensions/Notification.html                          context      3,559    1,187    458,569  ok
+docs/Extensions/String.html                                context      3,553    1,185    459,754  ok
+docs/Extensions/URL.html                                   context      3,550    1,184    460,938  ok
+docs/Extensions/URLComponents.html                         context      3,560    1,187    462,125  ok
+docs/Extensions/URLRequest.html                            context      3,557    1,186    463,311  ok
+docs/Extensions/URLSessionConfiguration.html               context      3,570    1,190    464,501  ok
+docs/Extensions/[ServerTrustEvaluating].html               context      3,570    1,190    465,691  ok
+docs/Global Variables.html                                 context      3,522    1,174    466,865  ok
+docs/Protocols.html                                        context      9,123    3,041    469,906  ok
+docs/Protocols/AlamofireExtended.html                      context     11,581    3,861    473,767  ok
+docs/Protocols/AuthenticationCredential.html               context      3,570    1,190    474,957  ok
+docs/Protocols/Authenticator.html                          context      3,559    1,187    476,144  ok
+docs/Protocols/CachedResponseHandler.html                  context      3,567    1,189    477,333  ok
+docs/Protocols/DataDecoder.html                            context      3,557    1,186    478,519  ok
+docs/Protocols/DataPreprocessor.html                       context      3,562    1,188    479,707  ok
+docs/Protocols/DataResponseSerializerProtocol.html         context      3,576    1,192    480,899  ok
+docs/Protocols/DataStreamSerializer.html                   context      3,566    1,189    482,088  ok
+docs/Protocols/DownloadResponseSerializerProtocol.html     context      8,261    2,754    484,842  ok
+docs/Protocols/EmptyResponse.html                          context      3,559    1,187    486,029  ok
+docs/Protocols/EventMonitor.html                           context     11,202    3,734    489,763  ok
+docs/Protocols/ParameterEncoder.html                       context      3,562    1,188    490,951  ok
+docs/Protocols/ParameterEncoding.html                      context      3,563    1,188    492,139  ok
+docs/Protocols/RedirectHandler.html                        context      3,561    1,187    493,326  ok
+docs/Protocols/RequestAdapter.html                         context      3,560    1,187    494,513  ok
+docs/Protocols/RequestDelegate.html                        context      5,682    1,894    496,407  ok
+docs/Protocols/RequestInterceptor.html                     context     24,634    8,212    504,619  ok
+docs/Protocols/RequestRetrier.html                         context      3,560    1,187    505,806  ok
+docs/Protocols/ResponseSerializer.html                     context      3,564    1,188    506,994  ok
+docs/Protocols/ServerTrustEvaluating.html                  context      3,567    1,189    508,183  ok
+docs/Protocols/URLConvertible.html                         context      3,560    1,187    509,370  ok
+docs/Protocols/URLRequestConvertible.html                  context      3,567    1,189    510,559  ok
+docs/Protocols/UploadableConvertible.html                  context      3,567    1,189    511,748  ok
+docs/Protocols/WebSocketMessageSerializer.html             context      3,572    1,191    512,939  ok
+docs/Structs.html                                          context      5,426    1,809    514,748  ok
+docs/Structs/AlamofireExtension.html                       context      3,562    1,188    515,936  ok
+docs/Structs/DataResponse.html                             context      3,556    1,186    517,122  ok
+docs/Structs/DataResponsePublisher.html                    context      3,565    1,189    518,311  ok
+docs/Structs/DataStreamPublisher.html                      context      3,563    1,188    519,499  ok
+docs/Structs/DataStreamTask.html                           context      3,558    1,186    520,685  ok
+docs/Structs/DataTask.html                                 context      3,552    1,184    521,869  ok
+docs/Structs/DecodableStreamSerializer.html                context      3,569    1,190    523,059  ok
+docs/Structs/DecodableWebSocketMessageDecoder.html         context      3,576    1,192    524,251  ok
+docs/Structs/DecodableWebSocketMessageDecoder/Error.html   context      3,612    1,204    525,455  ok
+docs/Structs/DeflateRequestCompressor.html                 context      3,568    1,190    526,645  ok
+docs/Structs/DeflateRequestCompressor/DuplicateHeaderBehavior.html context      3,622    1,208    527,853  ok
+docs/Structs/DownloadResponse.html                         context      3,560    1,187    529,040  ok
+docs/Structs/DownloadResponsePublisher.html                context      3,569    1,190    530,230  ok
+docs/Structs/DownloadTask.html                             context      3,556    1,186    531,416  ok
+docs/Structs/Empty.html                                    context      4,612    1,538    532,954  ok
+docs/Structs/GoogleXSSIPreprocessor.html                   context      3,566    1,189    534,143  ok
+docs/Structs/HTTPHeader.html                               context      3,554    1,185    535,328  ok
+docs/Structs/HTTPHeaders.html                              context      3,555    1,185    536,513  ok
+docs/Structs/HTTPMethod.html                               context      3,554    1,185    537,698  ok
+docs/Structs/JSONEncoding.html                             context      3,556    1,186    538,884  ok
+docs/Structs/JSONEncoding/Error.html                       context      3,592    1,198    540,082  ok
+docs/Structs/PassthroughPreprocessor.html                  context      3,567    1,189    541,271  ok
+docs/Structs/PassthroughStreamSerializer.html              context      3,571    1,191    542,462  ok
+docs/Structs/Redirector.html                               context      3,554    1,185    543,647  ok
+docs/Structs/Redirector/Behavior.html                      context      3,593    1,198    544,845  ok
+docs/Structs/RequestAdapterState.html                      context      3,563    1,188    546,033  ok
+docs/Structs/ResponseCacher.html                           context      3,558    1,186    547,219  ok
+docs/Structs/ResponseCacher/Behavior.html                  context      3,597    1,199    548,418  ok
+docs/Structs/StreamOf.html                                 context      4,178    1,393    549,811  ok
+docs/Structs/StreamOf/Iterator.html                        context      3,591    1,197    551,008  ok
+docs/Structs/StringStreamSerializer.html                   context      3,566    1,189    552,197  ok
+docs/Structs/URLEncoding.html                              context      3,555    1,185    553,382  ok
+docs/Structs/URLEncoding/ArrayEncoding.html                context      3,599    1,200    554,582  ok
+docs/Structs/URLEncoding/BoolEncoding.html                 context      3,598    1,200    555,782  ok
+docs/Structs/URLEncoding/Destination.html                  context      3,597    1,199    556,981  ok
+docs/Structs/URLResponseSerializer.html                    context      3,565    1,189    558,170  ok
+docs/Typealiases.html                                      context      3,517    1,173    559,343  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes.html context      9,154    3,052    562,395  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/Adapter.html context      3,605    1,202    563,597  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/AlamofireNotifications.html context      3,620    1,207    564,804  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/AuthenticationInterceptor.html context      3,623    1,208    566,012  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/AuthenticationInterceptor/RefreshWindow.html context      3,667    1,223    567,235  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/ClosureEventMonitor.html context      3,617    1,206    568,441  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/CompositeEventMonitor.html context      5,901    1,967    570,408  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/CompositeTrustEvaluator.html context      3,621    1,207    571,615  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/ConnectionLostRetryPolicy.html context      3,623    1,208    572,823  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/DataRequest.html context      3,609    1,203    574,026  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/DataResponseSerializer.html context      3,620    1,207    575,233  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/DataStreamRequest.html context      3,615    1,205    576,438  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/DataStreamRequest/CancellationToken.html context      3,663    1,221    577,659  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/DataStreamRequest/Completion.html context      3,656    1,219    578,878  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/DataStreamRequest/Event.html context      3,651    1,217    580,095  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/DataStreamRequest/Stream.html context      3,652    1,218    581,313  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/DecodableResponseSerializer.html context      3,625    1,209    582,522  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/DefaultTrustEvaluator.html context      3,619    1,207    583,729  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/DisabledTrustEvaluator.html context      3,620    1,207    584,936  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/DownloadRequest.html context      3,613    1,205    586,141  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/DownloadRequest/Downloadable.html context      3,656    1,219    587,360  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/DownloadRequest/Options.html context      3,651    1,217    588,577  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/Interceptor.html context      3,609    1,203    589,780  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/JSONParameterEncoder.html context      3,618    1,206    590,986  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/JSONResponseSerializer.html context      3,620    1,207    592,193  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/MultipartFormData.html context      3,615    1,205    593,398  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/NetworkReachabilityManager.html context      7,485    2,495    595,893  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/NetworkReachabilityManager/NetworkReachabilityStatus.html context      4,808    1,603    597,496  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/NetworkReachabilityManager/NetworkReachabilityStatus/ConnectionType.html context      3,725    1,242    598,738  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/OfflineRetrier.html context     70,702   23,568    622,306  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/PinnedCertificatesTrustEvaluator.html context      3,630    1,210    623,516  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/PublicKeysTrustEvaluator.html context      3,622    1,208    624,724  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/Request.html context     23,215    7,739    632,463  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/Request/ResponseDisposition.html context      3,655    1,219    633,682  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/Request/State.html context      3,641    1,214    634,896  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/Retrier.html context      3,605    1,202    636,098  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/RetryPolicy.html context      5,201    1,734    637,832  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/RevocationTrustEvaluator.html context      3,622    1,208    639,040  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/RevocationTrustEvaluator/Options.html context      3,660    1,220    640,260  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/ServerTrustManager.html context      3,616    1,206    641,466  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/Session.html context    130,964   43,655    685,121  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/Session/RequestSetup.html context     46,651   15,551    700,672  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/SessionDelegate.html context      3,613    1,205    701,877  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/StringResponseSerializer.html context      3,622    1,208    703,085  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/URLEncodedFormEncoder.html context      3,619    1,207    704,292  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/URLEncodedFormEncoder/ArrayEncoding.html context      3,663    1,221    705,513  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/URLEncodedFormEncoder/BoolEncoding.html context      3,662    1,221    706,734  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/URLEncodedFormEncoder/DataEncoding.html context      3,662    1,221    707,955  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/URLEncodedFormEncoder/DateEncoding.html context      3,662    1,221    709,176  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/URLEncodedFormEncoder/Error.html context      3,655    1,219    710,395  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/URLEncodedFormEncoder/KeyEncoding.html context      3,661    1,221    711,616  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/URLEncodedFormEncoder/KeyPathEncoding.html context      3,665    1,222    712,838  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/URLEncodedFormEncoder/NilEncoding.html context      3,661    1,221    714,059  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/URLEncodedFormEncoder/SpaceEncoding.html context      3,663    1,221    715,280  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/URLEncodedFormParameterEncoder.html context      3,628    1,210    716,490  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/URLEncodedFormParameterEncoder/Destination.html context      3,670    1,224    717,714  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/UploadRequest.html context      3,611    1,204    718,918  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Classes/UploadRequest/Uploadable.html context      3,652    1,218    720,136  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Enums.html context      3,565    1,189    721,325  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Enums/AFError.html context      3,603    1,201    722,526  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Enums/AFError/MultipartEncodingFailureReason.html context      3,664    1,222    723,748  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Enums/AFError/ParameterEncoderFailureReason.html context      3,663    1,221    724,969  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Enums/AFError/ParameterEncoderFailureReason/RequiredComponent.html context      3,711    1,237    726,206  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Enums/AFError/ParameterEncodingFailureReason.html context      3,664    1,222    727,428  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Enums/AFError/ResponseSerializationFailureReason.html context      3,668    1,223    728,651  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Enums/AFError/ResponseValidationFailureReason.html context      3,665    1,222    729,873  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Enums/AFError/ServerTrustFailureReason.html context      3,658    1,220    731,093  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Enums/AFError/ServerTrustFailureReason/Output.html context      3,695    1,232    732,325  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Enums/AFError/URLRequestValidationFailureReason.html context      3,667    1,223    733,548  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Enums/AFError/UnexpectedInputStreamLength.html context      3,661    1,221    734,769  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Enums/AFInfo.html context      3,602    1,201    735,970  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Enums/AuthenticationError.html context      3,615    1,205    737,175  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Enums/RetryResult.html context      3,607    1,203    738,378  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Extensions.html context      4,801    1,601    739,979  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Extensions/CharacterSet.html context      3,613    1,205    741,184  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Extensions/Error.html context      5,646    1,882    743,066  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Extensions/HTTPURLResponse.html context      3,616    1,206    744,272  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Extensions/Notification.html context      3,613    1,205    745,477  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Extensions/String.html context      3,607    1,203    746,680  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Extensions/URL.html context      3,604    1,202    747,882  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Extensions/URLComponents.html context      3,614    1,205    749,087  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Extensions/URLRequest.html context      3,611    1,204    750,291  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Extensions/URLSessionConfiguration.html context      3,624    1,208    751,499  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Extensions/[ServerTrustEvaluating].html context      3,624    1,208    752,707  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Global Variables.html context      3,576    1,192    753,899  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols.html context      9,177    3,059    756,958  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/AlamofireExtended.html context     11,635    3,879    760,837  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/AuthenticationCredential.html context      3,624    1,208    762,045  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/Authenticator.html context      3,613    1,205    763,250  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/CachedResponseHandler.html context      3,621    1,207    764,457  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/DataDecoder.html context      3,611    1,204    765,661  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/DataPreprocessor.html context      3,616    1,206    766,867  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/DataResponseSerializerProtocol.html context      3,630    1,210    768,077  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/DataStreamSerializer.html context      3,620    1,207    769,284  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/DownloadResponseSerializerProtocol.html context      8,315    2,772    772,056  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/EmptyResponse.html context      3,613    1,205    773,261  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/EventMonitor.html context     11,256    3,752    777,013  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/ParameterEncoder.html context      3,616    1,206    778,219  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/ParameterEncoding.html context      3,617    1,206    779,425  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/RedirectHandler.html context      3,615    1,205    780,630  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/RequestAdapter.html context      3,614    1,205    781,835  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/RequestDelegate.html context      5,736    1,912    783,747  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/RequestInterceptor.html context     24,688    8,230    791,977  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/RequestRetrier.html context      3,614    1,205    793,182  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/ResponseSerializer.html context      3,618    1,206    794,388  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/ServerTrustEvaluating.html context      3,621    1,207    795,595  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/URLConvertible.html context      3,614    1,205    796,800  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/URLRequestConvertible.html context      3,621    1,207    798,007  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/UploadableConvertible.html context      3,621    1,207    799,214  ok
+docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/WebSocketMessageSerializer.html context      3,626    1,209    799,214  EXCLUDED
+-- stopped: 47 further file(s) not reached
+
+included: 335 file(s), 799,214 tokens (99.9% of budget)
+excluded: 48 file(s)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Protocols/WebSocketMessageSerializer.html  (1,209 tokens — exceeds remaining budget)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs.html  (1,827 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/AlamofireExtension.html  (1,206 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/DataResponse.html  (1,204 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/DataResponsePublisher.html  (1,207 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/DataStreamPublisher.html  (1,206 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/DataStreamTask.html  (1,204 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/DataTask.html  (1,202 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/DecodableStreamSerializer.html  (1,208 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/DecodableWebSocketMessageDecoder.html  (1,210 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/DecodableWebSocketMessageDecoder/Error.html  (1,222 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/DeflateRequestCompressor.html  (1,208 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/DeflateRequestCompressor/DuplicateHeaderBehavior.html  (1,226 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/DownloadResponse.html  (1,205 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/DownloadResponsePublisher.html  (1,208 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/DownloadTask.html  (1,204 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/Empty.html  (1,556 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/GoogleXSSIPreprocessor.html  (1,207 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/HTTPHeader.html  (1,203 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/HTTPHeaders.html  (1,203 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/HTTPMethod.html  (1,203 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/JSONEncoding.html  (1,204 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/JSONEncoding/Error.html  (1,216 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/PassthroughPreprocessor.html  (1,207 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/PassthroughStreamSerializer.html  (1,209 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/Redirector.html  (1,203 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/Redirector/Behavior.html  (1,216 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/RequestAdapterState.html  (1,206 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/ResponseCacher.html  (1,204 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/ResponseCacher/Behavior.html  (1,217 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/StreamOf.html  (1,411 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/StreamOf/Iterator.html  (1,215 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/StringStreamSerializer.html  (1,207 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/URLEncoding.html  (1,203 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/URLEncoding/ArrayEncoding.html  (1,218 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/URLEncoding/BoolEncoding.html  (1,218 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/URLEncoding/Destination.html  (1,217 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Structs/URLResponseSerializer.html  (1,207 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/Typealiases.html  (1,191 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/index.html  (2,408 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/search.json  (287,423 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.docset/Contents/Resources/Documents/undocumented.json  (8,346 tokens — budget exhausted before reached)
+  docs/docsets/Alamofire.xml  (104 tokens — budget exhausted before reached)
+  docs/index.html  (2,390 tokens — budget exhausted before reached)
+  docs/search.json  (287,405 tokens — budget exhausted before reached)
+  docs/undocumented.json  (8,328 tokens — budget exhausted before reached)
+  watchOS Example/watchOS Example.xcodeproj/project.pbxproj  (1,311 tokens — budget exhausted before reached)
+  watchOS Example/watchOS Example.xcodeproj/xcshareddata/xcschemes/watchOS Example WatchKit App.xcscheme  (585 tokens — budget exhausted before reached)
+
+raw diff:    4,023,458 chars  1,341,153 tokens
+packed:      2,397,954 chars    799,318 tokens
+reduction:    541,835 tokens (40.4%)
