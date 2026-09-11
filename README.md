@@ -320,6 +320,9 @@ fit rather than carrying on. At the stopping point 786 tokens were still free,
 and there was a 104-token file further down the list.
 
 ### Reproduce
+
+Everything under `evidence/` can be regenerated from scratch:
+
 ```
 pip install unidiff pytest
 
