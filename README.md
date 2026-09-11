@@ -283,6 +283,7 @@ The log separates two cases. One file was costed and didn't fit
 (`exceeds remaining budget`). The other 47 were never costed at all, because the
 budget was already gone by the time they came up
 (`budget exhausted before reached`).
+
 ### Annotation overhead
 
 Annotation adds line addresses (`[CTX:L11]`, `[NEW:L14]`) to every line, which
@@ -290,17 +291,13 @@ costs tokens rather than saving them:
 
 | run | raw tokens | annotated tokens | overhead |
 |---|---|---|---|
+| `HEAD~5` | 163,426 | 161,447 | −1.2% |
 | `HEAD~10` | 272,948 | 289,141 | +5.9% |
 | `HEAD~20` | 1,341,153 | 1,445,811 | +7.8% |
 
 This is the price of addressable findings and is stable across runs. Note that
 `pack.py` reports a single `reduction:` figure that nets this overhead against
 excluded files; the two effects are separated above.
-
-### Known limitation: ordering is the de-facto policy
-
-With size as the only exclusion lever, the order files are costed in decides
-what survives.
 
 ### What got dropped, and why the order matters
 
