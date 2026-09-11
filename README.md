@@ -255,7 +255,7 @@ The guard never fired. The composition is the more interesting result:
 | Group                          | Files | Tokens  | Share |
 | ------------------------------ | ----- | ------- | ----- |
 | `docs/` generated HTML         | 300   | 134,131 | 83.1% |
-| — of which `docs/docsets/`     | 151   |  70,045 | 43.4% |
+| duplicates `docs/docsets/`     | 151   |  70,045 | 43.4% |
 | project files (pbxproj, scheme)|  10   |  10,547 |  6.5% |
 | `Gemfile.lock`                 |   1   |   3,373 |  2.1% |
 | `Source/`                      |   7   |   2,613 |  1.6% |
