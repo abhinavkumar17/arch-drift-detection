@@ -322,6 +322,7 @@ One smaller thing in the same area: packing stops at the first file that doesn't
 fit rather than carrying on. At the stopping point 786 tokens were still free,
 and there was a 104-token file further down the list.
 
+### Reproduce
 ```
 pip install unidiff pytest
 
