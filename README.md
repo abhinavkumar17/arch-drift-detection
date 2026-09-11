@@ -11,7 +11,7 @@ a comment.
 
 ## How the pipeline works
 
-Four separate steps, in order. They are easy to collapse into one another, so
+Five separate steps, in order. They are easy to collapse into one another, so
 they are spelled out here deliberately.
 
 **1. GitHub notifies us.** A PR is opened. GitHub fires a webhook to our Lambda
@@ -29,9 +29,13 @@ clones the repo, checks out the PR branch, and produces the unified diff itself.
 This is why Fargate exists: cloning a repo the size that would exceed
 Lambda's limits.
 
-**4. `annotate.py` prepares it for the model.** The diff is addressed, filtered,
-and turned into text the model can safely cite — plus an allow-list used to
-validate whatever the model sends back.
+**4. `annotate.py` prepares it for the model.** The diff is addressed and turned
+into text the model can safely cite — plus an allow-list used to validate
+whatever the model sends back.
+
+**5. `pack.py` fits it to the budget.** Files are costed one by one against a
+token budget and packed until the budget is spent. Size is the only thing that
+excludes a file.
 
 ---
 
@@ -42,14 +46,14 @@ validate whatever the model sends back.
 | 0 | Lambda receives PR webhook, validates signature, logs the event             | ✅ Done         |
 | 1 | Lambda → on-demand Fargate task; task logs the fields and exits             | ⬜ **Next**     |
 | 2 | Clone PR repo (GitHub CLI + PAT), retrieve diff                             | ⬜ Planned      |
-| 3 | Annotation pass — address every line, two-tier filter, build allow-list     | ✅ Done (local) |
-| 4 | Oversized-diff guard                                                        | ⬜ Planned      |
-| 5 | Tokenizer measurement — quantify the annotation saving                      | ⬜ Planned      |
+| 3 | Annotation pass — address every line, two-tier split, build allow-list      | ✅ Done (local) |
+| 4 | Context budget guard — pack to a token budget, exclude on size only         | ✅ Done (local) |
+| 5 | Measure the annotation pass against a real diff                             | ✅ Done (local) |
 | 6 | Model harness — start with Council of Experts                               | ⬜ Planned      |
 
-**Note on Stage 3.** It is built and tested, but it has only ever run on a diff
-produced by hand with `git diff` on a local machine. It has never run on a diff
-that Stage 2 fetched, because Stage 2 does not exist yet.
+**Note on Stages 3–5.** They are built and tested, but they have only ever run on
+a diff produced by hand with `git diff` on a local machine. They have never run on
+a diff that Stage 2 fetched, because Stage 2 does not exist yet.
 
 ---
 
@@ -166,22 +170,26 @@ way to produce addresses that look right and point nowhere.
 ### 2. Sort files into tiers
 
 Not every file worth reading is worth commenting on, so read and comment are
-separate permissions. `file_tier()` sorts each path into one of three buckets:
+separate permissions. `file_tier()` sorts each path into one of two buckets:
 
-| Tier      | Files                                                                                | Treatment                      |
-| --------- | ------------------------------------------------------------------------------------ | ------------------------------ |
-| `comment` | production `.swift`, `.kt`, `.kts`                                                   | model may read **and** comment |
-| `context` | tests, `.md`, `.yml`, `.yaml`, `.json`                                               | model may read, never comment  |
-| `drop`    | lockfiles, `Pods/`, `vendor/`, `build/`, `generated/`, `.min.*`, `.pbxproj`, `docs/` | never sent                     |
+| Tier      | Files                                                                     | Treatment                      |
+| --------- | ------------------------------------------------------------------------- | ------------------------------ |
+| `comment` | production `.swift`, `.kt`, `.kts`                                        | model may read **and** comment |
+| `context` | everything else — tests, docs, lockfiles, project files, generated output  | model may read, never comment  |
 
-Tests sit in the middle tier deliberately. A test reaching into an internal it
+Tests sit in the context tier deliberately. A test reaching into an internal it
 has no business knowing about is one of the stronger drift signals available —
 dropping tests loses that signal, while letting the model comment on them
 produces noise. Read-only is the right setting.
 
-Anything in `drop` cannot violate a layering rule, so sending it buys nothing.
-This is where the token saving comes from: not smarter parsing, just not sending
-files that can't be wrong.
+Nothing is excluded by category. A file's path is a poor predictor of whether it
+matters: code changing while its tests do not is itself a drift signal, and it is
+invisible if tests never reach the model. The only thing that removes a file is
+size, and that is handled in Stage 4.
+
+This means the annotation pass is **not** a compression step. Measured on a
+331-file Alamofire diff, it reduced the payload by 1.2% (163,426 → 161,447
+estimated tokens). Its value is addressability, not size.
 
 ### 3. Build the allow-list
 
@@ -205,7 +213,85 @@ lines and its own guard rejected 11 of them, while in the other direction it
 accepted 11 unchanged lines as commentable. Building the allow-list from the
 pass that numbered the lines makes that class of mismatch impossible.
 
-### Reproduce it
+---
+
+## Stage 4 — the context budget guard
+
+### The budget
+
+A context window is a per-request ceiling, not a quota. Everything sent in one
+call — prompt template, diff, and the model's own response — has to fit inside
+it. So the payload gets a share, not the whole thing:
+
+```
+1,000,000 tokens   context window
+      × 0.80       reserve 20% for the prompt template and the response
+= 800,000 tokens   payload budget
+```
+
+Tokens are estimated by character count, not by a tokenizer library:
+
+```python
+tokens = ceil(len(text) / 3.0)
+```
+
+Three characters per token is deliberately pessimistic — real code runs nearer
+3.3–3.6 — so the estimate overshoots and the 20% reserve absorbs the error. That
+is the entire counter, and it carries no dependency.
+
+### How packing works
+
+`pack.py` walks the annotated file blocks in order, costs each one, and adds it
+to the payload while the running total stays under budget. Every decision is
+logged: path, tier, characters, tokens, running total, and status. That log is
+the evidence artefact, written to `evidence/pack-run.txt`.
+
+Two behaviours are parameters rather than baked-in assumptions, because the right
+answer depends on the repo:
+
+| Parameter     | Options                                                                     |
+| ------------- | --------------------------------------------------------------------------- |
+| `order`       | `None` — GitHub's diff order · a sort key, e.g. commentable source first     |
+| `on_overflow` | `"stop"` — halt at the first file that doesn't fit · `"skip"` — keep trying  |
+
+These matter only when the budget actually binds, but then they decide everything
+that survives. On a 5-file test diff forced to a 150-token budget, the three
+configurations produced three different sets of survivors — with `"stop"` and
+diff order, the only commentable source file was never reached; with source-first
+ordering it survived. **Walk order is still an open question.**
+
+### What a real diff looks like
+
+Run against `evidence/pr.diff` (Alamofire, `HEAD~5..HEAD`):
+
+```
+331 files   161,335 tokens   20.2% of budget   0 excluded
+```
+
+The guard never fired. The composition is the more interesting result:
+
+| Group                          | Files | Tokens  | Share |
+| ------------------------------ | ----- | ------- | ----- |
+| `docs/` generated HTML         | 300   | 134,131 | 83.1% |
+| — of which `docs/docsets/`     | 151   |  70,045 | 43.4% |
+| project files (pbxproj, scheme)|  10   |  10,547 |  6.5% |
+| `Gemfile.lock`                 |   1   |   3,373 |  2.1% |
+| `Source/`                      |   7   |   2,613 |  1.6% |
+| **`comment` tier (total)**     | **8** | **4,014** | **2.5%** |
+
+So 97.5% of what the model reads, it cannot comment on. That is by design.
+
+**Open question: duplicates.** `docs/docsets/…/Documents/` is a byte-for-byte
+copy of `docs/` — the Xcode offline docset. All 149 mirrored pairs have identical
+changed lines, costing 70,045 tokens (43% of the payload) to send the same
+content twice. Redundancy is not the same as relevance: dropping an exact
+duplicate needs no category list and no guess about what matters. Whether
+content-level dedup sits inside or outside the no-filter rule is worth deciding
+before this runs on a large repo.
+
+---
+
+## Reproduce it
 
 Everything under `evidence/` can be regenerated from scratch:
 
@@ -214,13 +300,12 @@ pip install unidiff pytest
 
 git diff HEAD~5 HEAD > pr.diff
 python annotate.py pr.diff > annotation-run.txt
+python pack.py pr.diff > pack-run.txt
 python -m pytest test_annotate.py -v > test-run.txt
 ```
 
-### Tests
+## Tests
 
 `test_annotate.py` runs on diff strings alone — no AWS, no GitHub, no model. So
 Stage 3's correctness can be verified today, while the stages around it are
 still unbuilt.
-
-
