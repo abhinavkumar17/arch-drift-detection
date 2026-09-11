@@ -299,26 +299,6 @@ This is the price of addressable findings and is stable across runs. Note that
 `pack.py` reports a single `reduction:` figure that nets this overhead against
 excluded files; the two effects are separated above.
 
-### What got dropped, and why the order matters
-
-48 files came out of the `HEAD~20` run. Looking at which ones, they were all at
-the tail of the list — and the order files are costed in is just the order they
-appear in the diff, which is alphabetical by path.
-
-That turns out to matter. Two generated search files are 287,405 and 287,423
-tokens, about 72% of the whole budget between them. They were dropped only
-because `docs/` sorts after `Source/` and `Tests/`. Sort the list differently
-and those two files alone would push out every line of production Swift.
-
-So the ordering is doing real work here, and nobody chose it. Is it something we
-control? And does it mean the right files are reaching the model at the right
-time? With size as the only exclusion rule, whatever order the files arrive in
-is effectively the review policy.
-
-One smaller thing in the same area: packing stops at the first file that doesn't
-fit rather than carrying on. At the stopping point 786 tokens were still free,
-and there was a 104-token file further down the list.
-
 ### Reproduce
 
 Everything under `evidence/` can be regenerated from scratch:
