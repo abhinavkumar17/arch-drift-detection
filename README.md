@@ -265,6 +265,61 @@ So 97.5% of what the model reads, it cannot comment on.
 
 ---
 
+### Evidence: budget enforcement
+
+Three runs against Alamofire, same code path, increasing diff size.
+
+| run | files in | tokens | % of budget | files excluded |
+|---|---|---|---|---|
+| `HEAD~5` | 331 | 161,335 | 20.2% | 0 |
+| `HEAD~10` | 362 | 289,022 | 36.1% | 0 |
+| `HEAD~20` | 335 | 799,214 | 99.9% | 48 |
+
+Budget is 800,000 tokens — 80% of a 1,000,000 token window — counted with a
+hand-written character counter at 3.0 chars/token. No tokenizer library, no
+category filters: docs, tests and generated output are all eligible.
+
+The first two runs fit entirely. `HEAD~20` is the first input to exceed the
+budget, and the log records two distinct exclusion reasons:
+
+- `exceeds remaining budget` — the file that did not fit (1 file)
+- `budget exhausted before reached` — files never costed (47 files)
+
+Raw diff for `HEAD~20` was 1,341,153 tokens against a 800,000 budget, so
+exclusion was required rather than incidental.
+
+### Annotation overhead
+
+Annotation adds line addresses (`[CTX:L11]`, `[NEW:L14]`) to every line, which
+costs tokens rather than saving them:
+
+| run | raw tokens | annotated tokens | overhead |
+|---|---|---|---|
+| `HEAD~10` | 272,948 | 289,141 | +5.9% |
+| `HEAD~20` | 1,341,153 | 1,445,811 | +7.8% |
+
+This is the price of addressable findings and is stable across runs. Note that
+`pack.py` reports a single `reduction:` figure that nets this overhead against
+excluded files; the two effects are separated above.
+
+### Known limitation: ordering is the de-facto policy
+
+With size as the only exclusion lever, the order files are costed in decides
+what survives.
+
+In the `HEAD~20` run, two generated files — `docs/search.json` and its docset
+copy — are 287,405 and 287,423 tokens, together **72% of the entire budget**.
+They were excluded only because `docs/` sorts after `Source/` and `Tests/` in
+ASCII order. Under a different sort, those two files alone would evict all
+production Swift before review.
+
+Secondary: packing stops at the first file that does not fit. At the stop point
+786 tokens remained and `docs/docsets/Alamofire.xml` (104 tokens) would have
+fit, but was not costed.
+
+**Open question:** should costing order be value-based (production source first,
+generated output last) rather than alphabetical?
+
 ## Reproduce it
 
 Everything under `evidence/` can be regenerated from scratch:
