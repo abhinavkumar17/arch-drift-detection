@@ -15,6 +15,11 @@ is not optional — a bare line number is ambiguous.
 The allow-list is built from the same pass, split by side. A finding is only
 posted if its (path, line, side) appears in it.
 
+No file is excluded by category. Nothing is dropped for being a lockfile, a
+doc, generated output or a test. Every file in the diff reaches the model as
+either commentable or context-only; the sole exclusion mechanism is the size
+budget in pack.py.
+
 Run it:
     python annotate.py sample.diff
 """
@@ -31,19 +36,9 @@ import unidiff
 # on these.
 COMMENTABLE_EXTENSIONS = (".swift", ".kt", ".kts")
 
-# Files the model may READ for context but never comment on. Tests earn their
-# place here: a test reaching into an internal it shouldn't know about is one
-# of the stronger drift signals available.
-CONTEXT_EXTENSIONS = (".swift", ".kt", ".kts", ".md", ".yml", ".yaml", ".json")
-
-# Never worth a token, in either tier.
-NOISE_MARKERS = (
-    "package-lock.json", "podfile.lock", "gemfile.lock", "yarn.lock",
-    "/pods/", "/vendor/", "/build/", "/generated/", ".min.js", ".min.css",
-    ".pbxproj", ".xcworkspacedata",
-    "/docs/", "undocumented.json",
-)
-
+# Everything else is context: readable, never commentable. Tests are context
+# by design — a test reaching into an internal it shouldn't know about is one
+# of the stronger drift signals available, but commenting on tests is noise.
 TEST_PATH_MARKERS = ("test/", "tests/", "/test", "spec/", "specs/")
 
 
@@ -57,10 +52,12 @@ class AnnotatedLine:
     commentable: bool      # False for context lines and context-tier files
 
 
-def _is_noise(path: str) -> bool:
-    # leading slash so "/pods/" matches both "Pods/x.swift" and "ios/Pods/x.swift"
-    lowered = "/" + path.lower()
-    return any(marker in lowered for marker in NOISE_MARKERS)
+@dataclass
+class FileBlock:
+    """One file's annotated text, ready to be packed into the payload."""
+    path: str
+    tier: str              # "comment" | "context"
+    text: str
 
 
 def _is_test_file(path: str) -> bool:
@@ -69,11 +66,11 @@ def _is_test_file(path: str) -> bool:
 
 
 def file_tier(path: str) -> str:
-    """One of "comment", "context", "drop"."""
-    if _is_noise(path):
-        return "drop"
-    if not path.endswith(CONTEXT_EXTENSIONS):
-        return "drop"
+    """One of "comment", "context". Nothing is dropped here.
+
+    Commentable means the model may flag a finding on it. Everything else is
+    still sent — it just can't be commented on.
+    """
     if path.endswith(COMMENTABLE_EXTENSIONS) and not _is_test_file(path):
         return "comment"
     return "context"
@@ -93,10 +90,7 @@ def annotate(diff_text: str) -> list[AnnotatedLine]:
 
     for patched_file in patch:
         path = patched_file.path
-        tier = file_tier(path)
-        if tier == "drop":
-            continue
-        can_comment = tier == "comment"
+        can_comment = file_tier(path) == "comment"
 
         for hunk in patched_file:
             for line in hunk:
@@ -147,6 +141,39 @@ def is_in_diff(path: str, line: int, side: str,
     return line in allowed.get(path, {}).get(side, set())
 
 
+TAG_FOR = {"added": "NEW", "deleted": "OLD", "context": "CTX"}
+SIGN_FOR = {"added": "+", "deleted": "-", "context": " "}
+
+
+def file_blocks(lines: list[AnnotatedLine]) -> list[FileBlock]:
+    """Group annotated lines into one text block per file.
+
+    This is what pack.py consumes: it needs to cost each file separately, so
+    the payload has to be assembled per file rather than as one flat string.
+    File order follows the diff, which is GitHub's order.
+    """
+    blocks: list[FileBlock] = []
+    current_path: str | None = None
+    buffer: list[str] = []
+
+    def flush():
+        if current_path is not None:
+            blocks.append(FileBlock(current_path, file_tier(current_path),
+                                    "\n".join(buffer)))
+
+    for a in lines:
+        if a.path != current_path:
+            flush()
+            current_path = a.path
+            note = "" if file_tier(a.path) == "comment" else "   (context only, do not comment)"
+            buffer = [f"{a.path}{note}"]
+        tag = f"[{TAG_FOR[a.change]}:L{a.line}]"
+        buffer.append(f"{tag:<12} {SIGN_FOR[a.change]} {a.code}")
+
+    flush()
+    return blocks
+
+
 def render_for_model(lines: list[AnnotatedLine]) -> str:
     """The tagged text the model actually receives.
 
@@ -155,19 +182,7 @@ def render_for_model(lines: list[AnnotatedLine]) -> str:
         [NEW:L11] + import NetworkLayer
         [OLD:L11] - private var cancellables = Set<AnyCancellable>()
     """
-    tag_for = {"added": "NEW", "deleted": "OLD", "context": "CTX"}
-    sign_for = {"added": "+", "deleted": "-", "context": " "}
-
-    chunks: list[str] = []
-    current: str | None = None
-    for a in lines:
-        if a.path != current:
-            current = a.path
-            note = "" if file_tier(a.path) == "comment" else "   (context only, do not comment)"
-            chunks.append(f"\n{a.path}{note}")
-        tag = f"[{tag_for[a.change]}:L{a.line}]"
-        chunks.append(f"{tag:<12} {sign_for[a.change]} {a.code}")
-    return "\n".join(chunks).lstrip("\n")
+    return "\n\n".join(b.text for b in file_blocks(lines))
 
 
 def main() -> None:
