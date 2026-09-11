@@ -261,7 +261,7 @@ The guard never fired. The composition is the more interesting result:
 | `Source/`                      |   7   |   2,613 |  1.6% |
 | **`comment` tier (total)**     | **8** | **4,014** | **2.5%** |
 
-So 97.5% of what the model reads, it cannot comment on. That is by design.
+So 97.5% of what the model reads, it cannot comment on.
 
 ---
 
