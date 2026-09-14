@@ -118,16 +118,16 @@ def test_counters_reset_across_hunks():
 
 
 def test_file_tiers():
-    """Production source is commentable, tests and docs are read-only, noise is dropped."""
-    assert file_tier("MyRogers/ProfileViewController.swift") == "comment"
+    """Classify comment locations without excluding files by category."""
+    assert file_tier("SampleApp/ProfileViewController.swift") == "comment"
     assert file_tier("app/src/main/java/Repo.kt") == "comment"
 
-    assert file_tier("MyRogersTests/ProfileTests.swift") == "context"
+    assert file_tier("SampleAppTests/ProfileTests.swift") == "context"
     assert file_tier("README.md") == "context"
 
-    assert file_tier("Podfile.lock") == "drop"
-    assert file_tier("Pods/Alamofire/Source/Session.swift") == "drop"
-    assert file_tier("assets/logo.png") == "drop"
+    assert file_tier("Podfile.lock") == "context"
+    assert file_tier("Pods/Alamofire/Source/Session.swift") == "comment"
+    assert file_tier("assets/logo.png") == "context"
 
 
 def test_findings_outside_the_diff_are_rejected():

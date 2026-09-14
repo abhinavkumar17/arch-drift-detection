@@ -119,7 +119,7 @@ def allow_list(lines: list[AnnotatedLine]) -> dict[str, dict[str, set[int]]]:
     model. Split by side, because an old-file 40 and a new-file 40 are
     different places.
 
-        {"MyRogers/Profile.swift": {"LEFT": {41, 42}, "RIGHT": {41, 44}}}
+        {"SampleApp/Profile.swift": {"LEFT": {41, 42}, "RIGHT": {41, 44}}}
     """
     allowed: dict[str, dict[str, set[int]]] = {}
     for a in lines:
@@ -177,7 +177,7 @@ def file_blocks(lines: list[AnnotatedLine]) -> list[FileBlock]:
 def render_for_model(lines: list[AnnotatedLine]) -> str:
     """The tagged text the model actually receives.
 
-        MyRogers/Profile.swift
+        SampleApp/Profile.swift
         [CTX:L10]   import Combine
         [NEW:L11] + import NetworkLayer
         [OLD:L11] - private var cancellables = Set<AnyCancellable>()
