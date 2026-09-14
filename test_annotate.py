@@ -9,7 +9,7 @@ hunk headers whose line counts don't add up.
     pytest test_annotate.py -v
 """
 
-from annotate import annotate, allow_list, is_in_diff, file_tier
+from core.annotate import annotate, allow_list, is_in_diff, file_tier
 
 
 # Old file is 10 lines, new file is 3. Deleted lines sit at OLD line numbers

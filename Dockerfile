@@ -7,6 +7,7 @@ RUN pip install --no-cache-dir unidiff
 
 WORKDIR /app
 COPY annotate.py pack.py entrypoint.py ./
+COPY core/ ./core/
 RUN mkdir -p /work
 
 ENTRYPOINT ["python", "/app/entrypoint.py"]
