@@ -1,7 +1,5 @@
 # Android Architecture Guidelines
 
-Status: Initial draft agreed with Abhinav; awaiting Prateek's review.
-
 These are the conventions selected for the sample Android application. They are not universal requirements for every Android project. The initial scope is Jetpack Compose screens using ViewModels. Legacy exceptions and iOS rules have not yet been defined.
 
 ## Rule 1: The ViewModel owns screen data
