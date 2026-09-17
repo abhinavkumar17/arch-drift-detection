@@ -1,7 +1,5 @@
 # Android Architecture Guidelines
 
-These are the conventions selected for the sample Android application. They are not universal requirements for every Android project. The initial scope is Jetpack Compose screens using ViewModels. Legacy exceptions and iOS rules have not yet been defined.
-
 ## Rule 1: The ViewModel owns screen data
 
 The ViewModel owns screen data and its associated loading and error states. Composables display that state and send user actions back through callbacks to the ViewModel. State flows down to the UI, and user actions flow back up.
