@@ -240,11 +240,11 @@ tokens = ceil(len(text) / 3.0)
 `pack.py` walks the annotated file blocks in order, costs each one, and adds it
 to the payload while the running total stays under budget. Every decision is
 logged: path, tier, characters, tokens, running total, and status. That log is
-the evidence artefact, written to `evidence/pack-run.txt`.
+the evidence artefact, written to `evidence/annotation-test/pack-run.txt`.
 
 ### What a real diff looks like
 
-Run against `evidence/pr.diff` (Alamofire, `HEAD~5..HEAD`):
+Run against `evidence/annotation-test/pr.diff` (Alamofire, `HEAD~5..HEAD`):
 
 ```
 331 files   161,335 tokens   20.2% of budget   0 excluded
@@ -301,7 +301,7 @@ excluded files; the two effects are separated above.
 
 ### Reproduce
 
-Everything under `evidence/` can be regenerated from scratch:
+The commands below describe the earlier annotation and packing runs. Moving upstream references may produce different inputs; use the saved diffs in `evidence/annotation-test/` for comparisons. Complete-prompt evidence is described below.
 
 ```
 pip install unidiff pytest
@@ -309,11 +309,53 @@ pip install unidiff pytest
 git diff HEAD~5 HEAD > pr.diff
 python annotate.py pr.diff > annotation-run.txt
 python pack.py pr.diff > pack-run.txt
-python -m pytest test_annotate.py -v > test-run.txt
+python -m pytest tests/test_annotate.py -v > test-run.txt
 ```
 
 ## Tests
 
-`test_annotate.py` runs on diff strings alone — no AWS, no GitHub, no model. So
+Run all local unit tests from the repository root with `python -m pytest tests -v`. Tests live in `tests/` and cover annotation, diff packing, and complete-prompt assembly/budgeting. No AWS or model calls are needed.
+
+
+`tests/test_annotate.py` runs on diff strings alone — no AWS, no GitHub, no model. So
 Stage 3's correctness can be verified today, while the stages around it are
 still unbuilt.
+
+## Test evidence and results
+
+The evidence folders record two stages of local testing against saved Alamofire diffs. No model calls or architectural review findings are represented here.
+
+### evidence/annotation-test: annotation and diff-only packing
+
+- `pr.diff` and `pr-20.diff`: saved small and large input diffs, historically described as HEAD~5 and HEAD~20. Reuse these files for comparisons; upstream HEAD changes over time.
+- `annotation-run.txt` and `annotation-run-20.txt`: earlier line-annotation outputs.
+- `pack-run.txt` and `pack-run-20.txt`: earlier diff-only packing results. The small run included 161,335 estimated tokens. The large run kept 799,214 estimated tokens and excluded 48 files.
+- `test-run.txt`: historical annotation-test output, not the current full test suite.
+
+Despite the folder name, this stage includes both annotation and packing. The HEAD~10 results mentioned above do not have corresponding saved artifacts here.
+
+### evidence/prompt-test: complete-prompt budget checks
+
+Each saved diff has two outputs:
+
+- `.prompt.txt`: review template plus version-two guidelines plus all blocks emitted by annotation.
+- `.report.json`: estimated tokens, input budget, expected outcome, pass/fail comparison, and SHA-256 fingerprints of the input files.
+
+| Input | Estimated tokens | Input budget | Fits | Expected-result check |
+| --- | ---: | ---: | --- | --- |
+| pr.diff | 164,870 | 800,000 | Yes | Passed |
+| pr-20.diff | 1,449,353 | 800,000 | No | Passed |
+
+The large case passing its test means overflow was correctly detected; it does not mean the prompt is acceptable for model submission.
+
+### Why the results differ
+
+The earlier packing run trims annotated file blocks to fit. The new check measures the complete assembled prompt without budget trimming. The large increase is mainly because all annotated blocks are retained, not because the guidelines alone added that many tokens.
+
+Both stages use the character-based estimate ceil(characters / 3). This is not an exact provider token count. The 800,000 input budget is a configured assumption leaving 200,000 tokens outside the input under the project's assumed one-million-token context window; an actual model's limits still need verification.
+
+### How the prompt evidence was produced
+
+The user built the local Docker image and ran a Python verification script inside it, overriding the usual entrypoint. The repository was mounted read-only at /app and an output folder at /work. The script read REVIEW_TEMPLATE.md, GUIDELINES_V2.md, and each saved diff, called core.prompt.prepare_prompt with an 800,000-token budget, and wrote the prompt and report. The new normal container entrypoint and a saved reproduction command are not yet implemented.
+
+At the time of that run the diffs lived directly under evidence/. They now live under evidence/annotation-test/; any rerun must use the new paths. File contents are unchanged. The original generated outputs remain in out/prompt-budget/; evidence/prompt-test/ contains verified identical copies for review. These files are historical snapshots and do not automatically update when code or guidelines change.

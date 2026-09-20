@@ -1,0 +1,15 @@
+{
+  "diff": "pr.diff",
+  "input_budget": 800000,
+  "estimated_tokens": 164870,
+  "fits": true,
+  "expected_fit": true,
+  "check_passed": true,
+  "estimator": "ceil(characters / 3)",
+  "budget_trimming": false,
+  "input_sha256": {
+    "diff": "7289a125988e49731fb46a019686b007a06ae1a7753fd37d80da38ce76bed2ad",
+    "template": "8efe54e3eeb795adbe7f57fe1d26952951e2a4d3dd37941b76cc4e209def99d4",
+    "guidelines": "85a9e4825b96974c59192b3366135aa919b7cc96848e77539ae60021d13d8106"
+  }
+}
