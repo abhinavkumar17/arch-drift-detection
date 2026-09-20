@@ -1,7 +1,5 @@
 # Android Architecture Guidelines — Version 2
 
-*Draft for discussion with Prateek.*
-
 These guidelines describe the design principles we want to follow and how they apply to our Android app. The examples help explain the intent; they aren’t the only acceptable way to write the code.
 
 ## 1. Keep screen logic separate from data access
