@@ -1,0 +1,15 @@
+{
+  "status": "ready",
+  "steps": {
+    "tests": "passed",
+    "diff": "passed",
+    "annotation": "passed",
+    "prompt_budget": "passed"
+  },
+  "model_called": false,
+  "source": {
+    "repository": "https://github.com/Alamofire/Alamofire.git",
+    "base_commit": "903c53c710d1cbbac0b4b9c2527aefb791e1fee3",
+    "head_commit": "bda9ed57d72988a3a2ada33d824583541f86eac6"
+  }
+}

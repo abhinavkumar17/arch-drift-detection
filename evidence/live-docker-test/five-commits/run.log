@@ -1,0 +1,10 @@
+Evidence folder: /work/20260924T011238Z-q6ixdw1t
+RUNNING: tests
+PASSED: Application tests. See tests.log and tests.xml; this is not an architecture verdict.
+RUNNING: diff
+PASSED: Input saved as pr.diff; exact source recorded in summary.json.
+RUNNING: annotation
+PASSED: Annotated lines saved in annotation.log.
+RUNNING: prompt_budget
+READY: 164,857 estimated tokens / 800,000 input budget. Prompt and budget report saved; no model called.
+Finished: ready. See summary.json.

@@ -397,3 +397,16 @@ Repeat with `/inputs/pr-20.diff` for the historical large input. Exit code 0 mea
 Every run folder contains `run.log` and `summary.json`. Successful test execution also saves `tests.log` and `tests.xml`. Later steps save `pr.diff`, `annotation.log`, `prompt.txt`, and `budget-report.json`. Clone mode additionally saves the repository and Git logs. A failure can leave only the artifacts from steps reached so far. These generated folders are local output; selected evidence can be archived after review.
 
 Local runner validation on September 23, 2026: all 27 tests passed. Saved small input: 164,857 estimated tokens (fits). Saved large input: 1,449,340 (over budget). Both used an 800,000 input budget and current guidelines; earlier evidence remains unchanged. Full local logs are under `out/runner-validation/`. Docker validation subsequently passed on the same date: the image built successfully, both runs passed all 27 tests, and the small/large inputs returned exit codes 0/2 with the same estimates as the direct local runs. Evidence is saved under `out/docker-validation/`, one folder per run.
+
+### Live Alamofire Docker validation
+
+On September 23, 2026 (Toronto time; September 24 UTC), the normal Docker runner fetched Alamofire and generated the diff dynamically for each selected commit range. Both runs passed all 27 application tests, created the diff, annotated it, and checked the complete prompt.
+
+| Commit range | Estimated tokens | Input budget | Result | Evidence |
+| --- | ---: | ---: | --- | --- |
+| Latest 5 commits | 164,857 | 800,000 | Ready | [Five-commit summary](evidence/live-docker-test/five-commits/summary.json) |
+| Latest 20 commits | 1,449,340 | 800,000 | Stopped: over budget | [Twenty-commit summary](evidence/live-docker-test/twenty-commits/summary.json) |
+
+Each folder under `evidence/live-docker-test/` contains the unchanged `summary.json`, `budget-report.json`, `tests.log`, and `run.log` from its run. The summary records the exact repository and base/head commits; the budget report records input fingerprints. The progress logs refer to the original container output paths. Full generated prompts, diffs, and cloned repositories remain local under `out/runs/`.
+
+The oversized result confirms the budget guard stopped processing as intended, not that application tests failed. No files were trimmed to fit and no model was called. These are character-based estimates, not provider token counts. Future runs against moving HEAD may differ; use the recorded base/head revisions to select the same code range. This validates the live-repository preparation path locally in Docker; it does not verify Fargate deployment or model review.

@@ -1,0 +1,12 @@
+{
+  "input_budget": 800000,
+  "estimated_tokens": 164857,
+  "fits": true,
+  "estimator": "ceil(characters / 3)",
+  "budget_trimming": false,
+  "input_sha256": {
+    "diff": "6430895433b14af81142a1d837ba6a3c29e0aa7dbc0cdcd7a5e096bcf89bb757",
+    "template": "a537ecbd0df865e76d594138cf6a0f8dbdca9231d87d2c50618d6a33999faa0a",
+    "guidelines": "2c2fe7680a4ab6ccc180bea5c49e120c16e97a57dfd766e2b0e3f66b2b268432"
+  }
+}

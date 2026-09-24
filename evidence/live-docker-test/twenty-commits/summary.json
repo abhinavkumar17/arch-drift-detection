@@ -1,0 +1,15 @@
+{
+  "status": "over_budget",
+  "steps": {
+    "tests": "passed",
+    "diff": "passed",
+    "annotation": "passed",
+    "prompt_budget": "over_budget"
+  },
+  "model_called": false,
+  "source": {
+    "repository": "https://github.com/Alamofire/Alamofire.git",
+    "base_commit": "8f4ecb5c92f28e3841d2bc030485debf0eaa97d6",
+    "head_commit": "bda9ed57d72988a3a2ada33d824583541f86eac6"
+  }
+}

@@ -1,0 +1,11 @@
+Evidence folder: /work/20260924T011046Z-xcc_t3v3
+RUNNING: tests
+PASSED: Application tests. See tests.log and tests.xml; this is not an architecture verdict.
+RUNNING: diff
+PASSED: Input saved as pr.diff; exact source recorded in summary.json.
+RUNNING: annotation
+PASSED: Annotated lines saved in annotation.log.
+RUNNING: prompt_budget
+OVER_BUDGET: 1,449,340 estimated tokens / 800,000 input budget. Prompt and budget report saved; no model called.
+Stopped: reduce the code-change scope. No files were trimmed to fit.
+Finished: over_budget. See summary.json.

@@ -1,0 +1,35 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.14, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python
+rootdir: /app
+collecting ... collected 27 items
+
+tests/test_annotate.py::test_deleted_lines_validate_against_their_own_numbering PASSED [  3%]
+tests/test_annotate.py::test_context_lines_are_not_commentable PASSED    [  7%]
+tests/test_annotate.py::test_side_matches_change_type PASSED             [ 11%]
+tests/test_annotate.py::test_counters_reset_across_hunks PASSED          [ 14%]
+tests/test_annotate.py::test_file_tiers PASSED                           [ 18%]
+tests/test_annotate.py::test_findings_outside_the_diff_are_rejected PASSED [ 22%]
+tests/test_annotate.py::test_empty_diff PASSED                           [ 25%]
+tests/test_pack.py::test_pack_keeps_all_files_when_under_budget PASSED   [ 29%]
+tests/test_pack.py::test_pack_keeps_file_when_cost_equals_budget PASSED  [ 33%]
+tests/test_pack.py::test_pack_stops_when_file_exceeds_remaining_budget PASSED [ 37%]
+tests/test_prompt.py::test_assembly_preserves_annotations_and_template_text PASSED [ 40%]
+tests/test_prompt.py::test_budget_counts_whole_text_and_accepts_equality PASSED [ 44%]
+tests/test_prompt.py::test_over_budget_retains_all_annotated_blocks PASSED [ 48%]
+tests/test_prompt.py::test_inserted_content_is_not_processed_as_template PASSED [ 51%]
+tests/test_prompt.py::test_invalid_placeholder_count_is_rejected[0-{{ARCHITECTURE_GUIDELINES}}] PASSED [ 55%]
+tests/test_prompt.py::test_invalid_placeholder_count_is_rejected[0-{{ANNOTATED_DIFF}}] PASSED [ 59%]
+tests/test_prompt.py::test_invalid_placeholder_count_is_rejected[2-{{ARCHITECTURE_GUIDELINES}}] PASSED [ 62%]
+tests/test_prompt.py::test_invalid_placeholder_count_is_rejected[2-{{ANNOTATED_DIFF}}] PASSED [ 66%]
+tests/test_prompt.py::test_nonpositive_budget_is_rejected[0] PASSED      [ 70%]
+tests/test_prompt.py::test_nonpositive_budget_is_rejected[-1] PASSED     [ 74%]
+tests/test_prompt.py::test_blank_guidelines_are_rejected PASSED          [ 77%]
+tests/test_runner.py::test_saved_diff_report_and_unique_runs[800000-0-ready] PASSED [ 81%]
+tests/test_runner.py::test_saved_diff_report_and_unique_runs[1-2-over_budget] PASSED [ 85%]
+tests/test_runner.py::test_failed_tests_stop_before_diff PASSED          [ 88%]
+tests/test_runner.py::test_real_git_commit_range PASSED                  [ 92%]
+tests/test_runner.py::test_invalid_commit_count[0] PASSED                [ 96%]
+tests/test_runner.py::test_invalid_commit_count[-1] PASSED               [100%]
+
+-------- generated xml file: /work/20260924T011046Z-xcc_t3v3/tests.xml ---------
+============================== 27 passed in 0.29s ==============================
