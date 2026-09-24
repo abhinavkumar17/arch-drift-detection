@@ -356,6 +356,44 @@ Both stages use the character-based estimate ceil(characters / 3). This is not a
 
 ### How the prompt evidence was produced
 
-The user built the local Docker image and ran a Python verification script inside it, overriding the usual entrypoint. The repository was mounted read-only at /app and an output folder at /work. The script read REVIEW_TEMPLATE.md, GUIDELINES_V2.md, and each saved diff, called core.prompt.prepare_prompt with an 800,000-token budget, and wrote the prompt and report. The new normal container entrypoint and a saved reproduction command are not yet implemented.
+The user built the local Docker image and ran a Python verification script inside it, overriding the usual entrypoint. The repository was mounted read-only at /app and an output folder at /work. The script read REVIEW_TEMPLATE.md, GUIDELINES_V2.md, and each saved diff, called core.prompt.prepare_prompt with an 800,000-token budget, and wrote the prompt and report. At the time of this historical run, the normal container entrypoint and a saved reproduction command were not yet implemented. The automated workflow is now described in Automated local preparation below.
 
 At the time of that run the diffs lived directly under evidence/. They now live under evidence/annotation-test/; any rerun must use the new paths. File contents are unchanged. The original generated outputs remain in out/prompt-budget/; evidence/prompt-test/ contains verified identical copies for review. These files are historical snapshots and do not automatically update when code or guidelines change.
+
+## Automated local preparation
+
+The runner now checks the application tests before preparing input. Each run creates a unique folder under the output directory and shows progress in the terminal. On failure, later steps are skipped. Passing tests does not mean the input has no architectural violations; no model is called yet.
+
+Install dependencies with `python -m pip install unidiff pytest`, then run from the repository root:
+
+```powershell
+python entrypoint.py --commits 20
+```
+
+This clones Alamofire and compares the selected head with its twentieth first-parent ancestor. Change `--commits` to 5 or 50 without editing code. Use `--repo` to choose a repository, `--head` to choose a head revision, and optionally `--base` for an explicit base. REPO_URL, HEAD_REF and BASE remain supported; an explicit base takes precedence over the commit count. The resolved commit IDs are saved.
+
+To repeat an existing input without fetching GitHub:
+
+```powershell
+python entrypoint.py --diff evidence/annotation-test/pr.diff
+```
+
+For Docker, start Docker Desktop and build the image, then run:
+
+```powershell
+docker build -t arch-drift .
+New-Item -ItemType Directory -Force .\out\runs | Out-Null
+docker run --rm --mount "type=bind,source=$($PWD.Path)\out\runs,target=/work" arch-drift --commits 20
+```
+
+To use a saved diff in Docker:
+
+```powershell
+docker run --rm --mount "type=bind,source=$($PWD.Path)\evidence\annotation-test,target=/inputs,readonly" --mount "type=bind,source=$($PWD.Path)\out\runs,target=/work" arch-drift --diff /inputs/pr.diff
+```
+
+Repeat with `/inputs/pr-20.diff` for the historical large input. Exit code 0 means the estimated prompt fits; 2 means over budget (expected for the large fixture); 1 means a processing/test failure. Invalid command arguments are rejected before a run begins. Full prompts are saved even when over budget; no budget trimming occurs.
+
+Every run folder contains `run.log` and `summary.json`. Successful test execution also saves `tests.log` and `tests.xml`. Later steps save `pr.diff`, `annotation.log`, `prompt.txt`, and `budget-report.json`. Clone mode additionally saves the repository and Git logs. A failure can leave only the artifacts from steps reached so far. These generated folders are local output; selected evidence can be archived after review.
+
+Local runner validation on September 23, 2026: all 27 tests passed. Saved small input: 164,857 estimated tokens (fits). Saved large input: 1,449,340 (over budget). Both used an 800,000 input budget and current guidelines; earlier evidence remains unchanged. Full local logs are under `out/runner-validation/`. Docker validation subsequently passed on the same date: the image built successfully, both runs passed all 27 tests, and the small/large inputs returned exit codes 0/2 with the same estimates as the direct local runs. Evidence is saved under `out/docker-validation/`, one folder per run.
