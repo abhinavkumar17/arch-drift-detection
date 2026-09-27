@@ -29,6 +29,8 @@ def parser():
     p.add_argument('--diff', type=Path, help='Use an existing diff instead of cloning')
     p.add_argument('--output', type=Path, default=Path(os.getenv('OUTPUT_DIR', 'out/runs')))
     p.add_argument('--budget', type=positive, default=800000)
+    p.add_argument('--evidence-bucket', default=os.getenv('EVIDENCE_BUCKET'),
+                   help='Optionally upload run evidence to S3')
     return p
 
 
@@ -45,6 +47,7 @@ def main(argv=None):
     folder = Path(tempfile.mkdtemp(prefix=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ-'), dir=args.output))
     summary = {'status': 'running', 'steps': {name: 'pending' for name in STEPS}, 'model_called': False}
     current = 'tests'
+    exit_code = 1
 
     def say(message):
         print(message, flush=True)
@@ -103,7 +106,7 @@ def main(argv=None):
         say(f'{summary["status"].upper()}: {result.estimated_tokens:,} estimated tokens / {args.budget:,} input budget. Prompt and budget report saved; no model called.')
         if not result.fits:
             say('Stopped: reduce the code-change scope. No files were trimmed to fit.')
-        return 0 if result.fits else 2
+        exit_code = 0 if result.fits else 2
     except Exception as error:
         summary['status'] = 'failed'
         summary['steps'][current] = 'failed'
@@ -112,11 +115,26 @@ def main(argv=None):
             if summary['steps'][step] == 'pending':
                 summary['steps'][step] = 'skipped'
         say(f'FAILED: {current}: {error}. Later steps skipped.')
-        return 1
+        exit_code = 1
     finally:
         save()
         say(f'Finished: {summary["status"]}. See summary.json.')
 
+
+    if args.evidence_bucket:
+        try:
+            from core.evidence import upload_evidence
+
+            say('RUNNING: Saving evidence to S3.')
+            destination = upload_evidence(folder=folder, bucket=args.evidence_bucket)
+            say(f'PASSED: Evidence saved to {destination}')
+        except Exception as error:
+            say(f'FAILED: Evidence upload: {error}')
+            exit_code = 1
+    else:
+        say('S3 upload not configured; evidence saved locally.')
+
+    return exit_code
 
 if __name__ == '__main__':
     sys.exit(main())

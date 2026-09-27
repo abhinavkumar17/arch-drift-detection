@@ -72,3 +72,9 @@ def test_real_git_commit_range(tmp_path, monkeypatch):
 def test_invalid_commit_count(number):
     with pytest.raises(SystemExit):
         entrypoint.parser().parse_args(['--commits', number])
+
+
+@pytest.fixture(autouse=True)
+def isolate_bucket_setting(monkeypatch):
+    # Existing local-run tests must stay local even inside an S3-enabled task.
+    monkeypatch.delenv('EVIDENCE_BUCKET', raising=False)
