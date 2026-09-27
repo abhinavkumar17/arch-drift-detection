@@ -1,140 +1,46 @@
 # arch-drift-detection
 
-## Local review milestone — September 27, 2026
+## Objective and approach
 
-One local command now prepares a saved diff in Docker, runs a model review through Pi on the laptop, validates the response, and saves evidence. Optional repository lookup lets the model inspect related code. PR fetching, automatic triggering, and comment posting are not part of this completed milestone.
+Build a self-hosted architecture-review bot that checks code changes against project guidelines and ultimately posts supported findings on pull requests.
 
-### 1. Prepare one complete prompt
+We validate the review locally first: prepare a complete prompt, check its budget, let Pi coordinate model review and controlled repository lookup, then validate and save the result. The proposed AWS deployment moves that workflow into an on-demand Fargate task triggered by GitHub events.
 
-The prompt combines five sections: role, architecture guidelines, annotated diff, review policy, and JSON response format. The review template adapts [TAKT's faceted prompting structure](https://github.com/nrslib/takt/blob/main/docs/faceted-prompting.md) to architecture review. Guidelines define the principles; policy requires supported findings; structured output lets the application check their locations.
+## Current results
 
-The full version-two guidelines and annotated changes are inserted into the template. No files are trimmed to fit. This layout and the findings schema are application choices, not mandatory Pi formats.
-
-### 2. Check the budget before review
-
-Preparation estimates the assembled prompt as character count divided by three, rounded up, then compares it with the configured input allowance. Over-budget preparation saves evidence and stops before Pi. The five-file experiment used **5,667 estimated tokens against a 16,000-token allowance**. These are estimates, not exact model token counts or monetary limits.
-
-### 3. Use Pi for the review conversation
-
-Pi was chosen to manage the model-and-tool conversation rather than implementing that loop ourselves. Docker runs preparation; the local coordinator then starts Pi using the installed CLI for diff-only review or our SDK adapter for repository lookup. Pi is not yet packaged inside Docker.
-
-Repository mode creates a fresh in-memory session with three custom read-only tools: find files, search text, and read lines. Our application captures a tracked-source snapshot, restricts tool access, checks estimated context before each model request, and records tool activity and provider-reported usage. These restrictions are application-level controls, not an operating-system sandbox.
-
-Pi accepts prompt text; our adapter reads the saved prompt and supplies it through the SDK. Additional instructions, tool definitions, and later tool results also contribute to model context. See [Pi SDK documentation](https://pi.dev/docs/latest/sdk). The tested Pi installation was version 0.87.1.
-
-### 4. Evidence from two Android experiments
-
-Testing used our [Now in Android fork](https://github.com/abhinavkumar17/nowinandroid). These controlled cases exercise our three guidelines; they do not establish general review accuracy or support for other platforms.
-
-**Test 1 — minimal state-ownership violation.** Two bookmarks files were changed so the screen directly mutated ViewModel-owned undo state. The model returned a finding. The reverse/fix diff returned no findings in the manual Docker-to-Pi run. The one-command coordinator subsequently reproduced the violation finding; the automated fix run remains unverified.
-
-**Test 2 — five-file change with repository lookup.** A Reset appearance action changed the settings dialog, label, ViewModel, dependency configuration, and Kotlin test. The deliberate violation made the ViewModel call the preferences data source directly, bypassing its repository interface. Both the diff-only baseline and the lookup-enabled run returned one finding.
-
-The lookup-enabled run performed **three searches and three reads**, inspecting the repository interface, repository implementation, and datastore implementation. This proves runtime lookup occurred; it does not prove improved accuracy over the baseline.
-
-| Model request | Context added | Estimated context | Reported uncached input | Reported cached input | Reported output |
-| --- | --- | ---: | ---: | ---: | ---: |
-| 1 | Prepared prompt, system instructions, tool definitions | 6,403 | 4,006 | 0 | 118 |
-| 2 | Three search results and retained history | 8,191 | 968 | 3,584 | 157 |
-| 3 | Three file reads and retained history | 13,052 | 3,991 | 3,584 | 600 |
-| Total across calls | Includes repeated context | — | 8,965 | 7,168 | 875 |
-
-Each request passed the **32,000 estimated input allowance**, with **4,096 tokens reserved for output**. Reported usage totaled **17,008 tokens across calls**, including repeated and cached context; this is not a dollar charge. No compaction occurred. Pi compaction is enabled, but our smaller custom guard can stop a request before model-window-based compaction activates.
-
-Evidence was recorded locally under `out/local-reviews/20260927T005754Z-51zsx84_`: findings, original response, tool events, preparation output, and summary. Generated run folders are intentionally excluded from Git.
-
-Response validation checks JSON structure and changed-line locations, not reasoning accuracy. The Android app and added Kotlin test were not built or run. The review application's Python and Node tests cover preparation failures, budget gates, response validation, repository restrictions, and tool limits.
-
-### Running the local checkpoint
-
-Requirements: Python with `unidiff` installed, Docker Desktop, Node.js, and a signed-in Pi installation. Build the preparation image and supply a saved diff:
-
-```powershell
-docker build -t arch-drift .
-python review_local.py --diff path/to/change.diff
-python review_local.py --diff path/to/change.diff --repo path/to/checkout
-```
-
-Repository mode requires the diff to match the checkout's tracked changes against HEAD. To run implementation checks without calling the model:
-
-```powershell
-python -m pytest tests host_tests -q
-node --test host_tests/test_repo_tools.mjs
-```
-
-Install `pytest` alongside `unidiff` for these local Python tests. S3 upload uses `boto3`, which is included in the Docker image.
-
-### Next stage
-
-Test a valid change whose interpretation depends on related code, comparing lookup disabled and enabled. Continue evaluating missing context, budget limits, and larger changes before moving the complete model review to Fargate.
-
-A manual five-commit Fargate **preparation** run and S3 upload were verified earlier. Full Pi review in AWS, automatic PR triggering, private-repository credentials, and posting comments remain pending.
-
----
-
-## Earlier design and historical notes
-
-The material below preserves the original plan and earlier experiments. Its deployment and completion claims are historical; the current milestone above takes precedence. In particular, webhook signature verification is not established by the earlier status table.
-
-
-A self-hosted bot that reviews pull requests for **architecture / layering
-drift** and posts inline comments on the offending lines.
-
-Narrow by design: it only comments on production source, only flags layering
-violations, and validates every model finding against the diff before it becomes
-a comment.
-
----
+- One local command completes preparation, Pi review, response validation, and evidence saving.
+- A minimal Android violation and a five-file repository-bypass experiment returned the intended findings; the manual reverse/fix test returned no findings.
+- The five-file run recorded three searches, three reads, and three model requests within the estimated context allowance. This proves lookup works, not improved accuracy over the diff-only baseline.
+- A manual Fargate preparation run saved evidence to S3. Complete model review in AWS remains pending.
 
 ## How the pipeline works
 
-Five separate steps, in order. They are easy to collapse into one another, so
-they are spelled out here deliberately.
+**Implemented local flow:** saved diff → annotation → complete prompt assembly → initial budget check → Pi review with optional source lookup → response validation → local evidence.
 
-**1. GitHub notifies us.** A PR is opened. GitHub fires a webhook to our Lambda
-URL. The payload is JSON metadata only — PR number, author, branch, repo. **It
-does not contain the diff.**
+Docker runs preparation. The local coordinator starts Pi on the host after preparation passes. Each repository-aware model request has an additional estimated context check. The current complete-prompt path does not run the earlier diff-only packer or trim files to fit.
 
-**2. Lambda validates and hands off.** Lambda verifies the webhook signature
-(confirming the request is really from GitHub), extracts the few fields that
-matter, and launches an on-demand Fargate task, passing those fields in as
-environment variables. Lambda does no heavy work — it is short-lived and
-memory-limited by design.
-
-**3. Fargate collects the diff.** The task authenticates with a GitHub PAT,
-clones the repo, checks out the PR branch, and produces the unified diff itself.
-This is why Fargate exists: cloning a repo the size that would exceed
-Lambda's limits.
-
-**4. `annotate.py` prepares it for the model.** The diff is addressed and turned
-into text the model can safely cite — plus an allow-list used to validate
-whatever the model sends back.
-
-**5. `pack.py` fits it to the budget.** Files are costed one by one against a
-token budget and packed until the budget is spent. Size is the only thing that
-excludes a file.
-
----
+**Planned cloud flow:** qualifying PR event → webhook validation → Fargate task → acquire repository and diff → prepare and review → save evidence → post review comments. This full sequence is not deployed yet.
 
 ## Status
 
-| # | Stage                                                                       | Status         |
-| - | --------------------------------------------------------------------------- | -------------- |
-| 0 | Lambda receives PR webhook, validates signature, logs the event             | ✅ Done         |
-| 1 | Lambda → on-demand Fargate task; task logs the fields and exits             | ⬜ **Next**     |
-| 2 | Clone PR repo (GitHub CLI + PAT), retrieve diff                             | ⬜ Planned      |
-| 3 | Annotation pass — address every line, two-tier split, build allow-list      | ✅ Done (local) |
-| 4 | Context budget guard — pack to a token budget, exclude on size only         | ✅ Done (local) |
-| 5 | Measure the annotation pass against a real diff                             | ✅ Done (local) |
-| 6 | Model harness — start with Council of Experts                               | ⬜ Planned      |
+| Area | Verified status |
+| --- | --- |
+| Webhook receiving | Receiving/logging demonstrated; signature verification not established by this checkpoint |
+| Automatic webhook → Fargate launch | Pending |
+| Automatic PR input acquisition and private-repository authentication | Pending |
+| Annotation and complete-prompt budget gate | Implemented and tested |
+| Local Pi integration and repository lookup | Demonstrated on controlled Android changes |
+| Response format and diff-location validation | Implemented and tested; does not validate reasoning accuracy |
+| Manual Fargate preparation and S3 upload | Demonstrated |
+| Full Pi review in Fargate and GitHub comment posting | Pending |
 
-**Note on Stages 3–5.** They are built and tested, but they have only ever run on
-a diff produced by hand with `git diff` on a local machine. They have never run on
-a diff that Stage 2 fetched, because Stage 2 does not exist yet.
+The sections below preserve the approach and evidence in development order. Earlier proposals and diff-only packing experiments describe their original scope; the current status above takes precedence. The latest local Pi milestone follows the Docker evidence at the bottom.
 
 ---
 
 ## Architecture Proposal, GitHub Webhook Handler
+
+Historical design proposal; the implementation status is summarized above.
 
 ### Objective
 
@@ -293,6 +199,8 @@ pass that numbered the lines makes that class of mismatch impossible.
 ---
 
 ## Stage 4 — the context budget guard
+
+This earlier experiment budgets the diff alone and may omit file blocks. The current full-prompt review path retains all supplied changes and stops when over budget, as described in the local Pi milestone below.
 
 ### The budget
 
@@ -487,3 +395,75 @@ On September 23, 2026 (Toronto time; September 24 UTC), the normal Docker runner
 Each folder under `evidence/live-docker-test/` contains the unchanged `summary.json`, `budget-report.json`, `tests.log`, and `run.log` from its run. The summary records the exact repository and base/head commits; the budget report records input fingerprints. The progress logs refer to the original container output paths. Full generated prompts, diffs, and cloned repositories remain local under `out/runs/`.
 
 The oversized result confirms the budget guard stopped processing as intended, not that application tests failed. No files were trimmed to fit and no model was called. These are character-based estimates, not provider token counts. Future runs against moving HEAD may differ; use the recorded base/head revisions to select the same code range. This validates the live-repository preparation path locally in Docker; it does not verify Fargate deployment or model review.
+
+---
+
+## Local review milestone — September 27, 2026
+
+One local command now prepares a saved diff in Docker, runs a model review through Pi on the laptop, validates the response, and saves evidence. Optional repository lookup lets the model inspect related code. PR fetching, automatic triggering, and comment posting are not part of this completed milestone.
+
+### 1. Prepare one complete prompt
+
+The prompt combines five sections: role, architecture guidelines, annotated diff, review policy, and JSON response format. The review template adapts [TAKT's faceted prompting structure](https://github.com/nrslib/takt/blob/main/docs/faceted-prompting.md) to architecture review. Guidelines define the principles; policy requires supported findings; structured output lets the application check their locations.
+
+The full version-two guidelines and annotated changes are inserted into the template. No files are trimmed to fit. This layout and the findings schema are application choices, not mandatory Pi formats.
+
+### 2. Check the budget before review
+
+Preparation estimates the assembled prompt as character count divided by three, rounded up, then compares it with the configured input allowance. Over-budget preparation saves evidence and stops before Pi. The five-file experiment used **5,667 estimated tokens against a 16,000-token allowance**. These are estimates, not exact model token counts or monetary limits.
+
+### 3. Use Pi for the review conversation
+
+Pi was chosen to manage the model-and-tool conversation rather than implementing that loop ourselves. Docker runs preparation; the local coordinator then starts Pi using the installed CLI for diff-only review or our SDK adapter for repository lookup. Pi is not yet packaged inside Docker.
+
+Repository mode creates a fresh in-memory session with three custom read-only tools: find files, search text, and read lines. Our application captures a tracked-source snapshot, restricts tool access, checks estimated context before each model request, and records tool activity and provider-reported usage. These restrictions are application-level controls, not an operating-system sandbox.
+
+Pi accepts prompt text; our adapter reads the saved prompt and supplies it through the SDK. Additional instructions, tool definitions, and later tool results also contribute to model context. See [Pi SDK documentation](https://pi.dev/docs/latest/sdk). The tested Pi installation was version 0.87.1.
+
+### 4. Evidence from two Android experiments
+
+Testing used our [Now in Android fork](https://github.com/abhinavkumar17/nowinandroid). These controlled cases exercise our three guidelines; they do not establish general review accuracy or support for other platforms.
+
+**Test 1 — minimal state-ownership violation.** Two bookmarks files were changed so the screen directly mutated ViewModel-owned undo state. The model returned a finding. The reverse/fix diff returned no findings in the manual Docker-to-Pi run. The one-command coordinator subsequently reproduced the violation finding; the automated fix run remains unverified.
+
+**Test 2 — five-file change with repository lookup.** A Reset appearance action changed the settings dialog, label, ViewModel, dependency configuration, and Kotlin test. The deliberate violation made the ViewModel call the preferences data source directly, bypassing its repository interface. Both the diff-only baseline and the lookup-enabled run returned one finding.
+
+The lookup-enabled run performed **three searches and three reads**, inspecting the repository interface, repository implementation, and datastore implementation. This proves runtime lookup occurred; it does not prove improved accuracy over the baseline.
+
+| Model request | Context added | Estimated context | Reported uncached input | Reported cached input | Reported output |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 1 | Prepared prompt, system instructions, tool definitions | 6,403 | 4,006 | 0 | 118 |
+| 2 | Three search results and retained history | 8,191 | 968 | 3,584 | 157 |
+| 3 | Three file reads and retained history | 13,052 | 3,991 | 3,584 | 600 |
+| Total across calls | Includes repeated context | — | 8,965 | 7,168 | 875 |
+
+Each request passed the **32,000 estimated input allowance**, with **4,096 tokens reserved for output**. Reported usage totaled **17,008 tokens across calls**, including repeated and cached context; this is not a dollar charge. No compaction occurred. Pi compaction is enabled, but our smaller custom guard can stop a request before model-window-based compaction activates.
+
+Evidence was recorded locally under `out/local-reviews/20260927T005754Z-51zsx84_`: findings, original response, tool events, preparation output, and summary. Generated run folders are intentionally excluded from Git.
+
+Response validation checks JSON structure and changed-line locations, not reasoning accuracy. The Android app and added Kotlin test were not built or run. The review application's Python and Node tests cover preparation failures, budget gates, response validation, repository restrictions, and tool limits.
+
+### Running the local checkpoint
+
+Requirements: Python with `unidiff` installed, Docker Desktop, Node.js, and a signed-in Pi installation. Build the preparation image and supply a saved diff:
+
+```powershell
+docker build -t arch-drift .
+python review_local.py --diff path/to/change.diff
+python review_local.py --diff path/to/change.diff --repo path/to/checkout
+```
+
+Repository mode requires the diff to match the checkout's tracked changes against HEAD. To run implementation checks without calling the model:
+
+```powershell
+python -m pytest tests host_tests -q
+node --test host_tests/test_repo_tools.mjs
+```
+
+Install `pytest` alongside `unidiff` for these local Python tests. S3 upload uses `boto3`, which is included in the Docker image.
+
+### Next stage
+
+Test a valid change whose interpretation depends on related code, comparing lookup disabled and enabled. Continue evaluating missing context, budget limits, and larger changes before moving the complete model review to Fargate.
+
+A manual five-commit Fargate **preparation** run and S3 upload were verified earlier. Full Pi review in AWS, automatic PR triggering, private-repository credentials, and posting comments remain pending.
