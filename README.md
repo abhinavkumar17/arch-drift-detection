@@ -51,11 +51,21 @@ flowchart TD
 
 ## Development milestones: why, tests, and evidence
 
-### 1. Acquire a reproducible diff
+### 1. Get the code changes from the PR
 
-**What we did:** first used saved Alamofire diffs, then verified live repository fetching in Docker. The later local PR coordinator fetches fixed base/head commits into a separate checkout, derives the diff from their merge base, and records the revisions. It checks for revision changes before treating a review as current.
+**Why:** give the reviewer the code changes it needs to inspect.
 
-**Result and proof:** saved inputs make the early experiments repeatable; live preparation demonstrated repository-to-diff acquisition. See the [small saved diff](evidence/annotation-test/pr.diff), [large saved diff](evidence/annotation-test/pr-20.diff), and [live five-commit run](evidence/live-docker-test/five-commits/summary.json). Private-repository and unattended cloud authentication remain pending.
+**Tests and results:** we set up a local test environment to collect code changes for review. We tested it with smaller and larger changes from Alamofire and later with a pull request in our Android fork. The setup successfully produced the diffs used in the following review tests.
+
+**Test projects and evidence:**
+
+- [Alamofire repository](https://github.com/Alamofire/Alamofire): used for the initial smaller and larger changes. See the [small saved diff](evidence/annotation-test/pr.diff), [large saved diff](evidence/annotation-test/pr-20.diff), and [Docker run result](evidence/live-docker-test/five-commits/summary.json).
+- [Our Now in Android fork](https://github.com/abhinavkumar17/nowinandroid): used for the Android review experiments. See the [settings-reset test PR](https://github.com/abhinavkumar17/nowinandroid/pull/1).
+
+**Open questions and pending work:**
+
+- Verify access to private repositories; the demonstrated PR workflow used a public repository.
+- Set up authentication for running in AWS without an interactive sign-in on a developer's laptop.
 
 ### 2. Annotate changes and validate comment locations
 
