@@ -123,9 +123,7 @@ flowchart TD
 
 **Why:** the eventual review should run without a developer's laptop or interactive sign-in. Fargate is the selected target for an on-demand container worker.
 
-**Already demonstrated:** manual preparation in Fargate with S3 evidence upload, as recorded in the historical milestone. That was preparation only; a directly linked cloud run artifact is not included in this documentation package.
-
-**Still pending:** packaging Pi and publication with preparation, unattended GitHub App/OpenRouter authentication, a manual end-to-end Fargate run, and then automatic event triggering. The old infrastructure alternatives remain in history; they are not competing current plans. Detailed remaining work is listed below.
+**Still pending:** packaging Pi and publication with preparation, unattended GitHub App/OpenRouter authentication, a manual end-to-end Fargate run, and then automatic event triggering.
 
 ## Review this checkpoint
 
