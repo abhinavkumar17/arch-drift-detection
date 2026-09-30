@@ -142,23 +142,34 @@ That lookup run used three model requests and reported 17,008 tokens in total, i
 
 **Open question:** does this response structure contain what we need to assess findings and prepare useful PR comments, or should it be adjusted before we add scoring and deduplication?
 
-### 7. Complete the local PR-to-comment loop
+### 7. Post the review comment to the PR
 
-**Why:** producing a finding locally is only part of the goal; it must reach the intended changed line on the reviewed PR without being stale or duplicated.
+**Why:** put the review result directly on the PR, where the developer can see the issue alongside the affected code.
 
-**What we did:** the PR coordinator records exact revisions. The publisher creates a preview, checks current revisions, submits against the reviewed commit, and records publication. An existing-review marker and a local submission journal help prevent duplicate posting.
+**Result:** we used a finding from one model and successfully posted it on the correct line of the Android test PR. This test proved the path from a saved finding to an inline GitHub comment. It did not combine findings from multiple models or use voting or focused review passes. The separate model-comparison runs were saved for analysis, not posted to the PR.
 
-**Result and proof:** the five-file Android test produced an [inline comment on the intended ViewModel line](https://github.com/abhinavkumar17/nowinandroid/pull/1#discussion_r4117992844). Repeat-posting verification is pending. See PR coordinator tests (local, not yet published) and publisher tests (local, not yet published). Cloud concurrency and durable duplicate tracking still need work; the local demonstration does not establish production-safe distributed posting.
+**Evidence:** [the comment posted on the ViewModel line](https://github.com/abhinavkumar17/nowinandroid/pull/1#discussion_r4117992844).
 
-### 8. Compare models on a larger unchanged fixture — latest checkpoint
+**Open questions and pending work:**
 
-**Why:** small examples did not show enough about differences in evidence gathering, suggestion quality, cost, and token use.
+- Verify that repeating the posting step with the same saved review does not create a duplicate comment.
+- Decide how to combine results from multiple reviews and remove overlapping findings before posting.
+- Agree on how findings should be assessed and selected for publication.
+- Confirm whether to use focused review passes or council voting. Neither approach is implemented; the decision is pending.
 
-**What we tested:** the same fifteen-file Android diff, prompt, source snapshot, and limits were given independently to Claude Sonnet 4.6, OpenAI GPT 5.5, and Gemini 2.5 Pro through OpenRouter. The fixture includes two architecture categories, two correctness categories, and supporting changes. Expected answers were excluded from model inputs. At the user's request, the Android fixture was not built or repaired first.
+### 8. Compare three models on the same larger code change
 
-**Result:** all three found the four intended categories. Claude returned five findings with an overlap; OpenAI returned four and checked the analytics consequence; Gemini returned four without tool use but proposed some incorrect fixes. Total recorded cost was about $0.413 USD. All responses passed the revised validation. This is a controlled comparison, not voting, and not proof of equal quality or broad accuracy.
+**Why:** we wanted to see how different models reviewed a larger change, including what they found, whether their suggested fixes made sense, and how much time and model usage each review needed.
 
-**Proof:** [comparison tables, tokens, costs, tools, and raw findings](evidence/model-comparison/README.md), [exact prompt](evidence/model-comparison/prompt.txt), and [fixture diff](evidence/model-comparison/input.diff). Review experiments stop here pending Pratik's input.
+**What we tested:** we prepared a fifteen-file Android change locally and manually ran it through Pi and OpenRouter with Claude Sonnet 4.6, OpenAI GPT 5.5, and Gemini 2.5 Pro. Each model received the same prompt, code changes, access to supporting source files, and review limits. The change included two architecture issue categories, two correctness issue categories, and supporting changes. The expected answers were kept out of the model inputs.
+
+This particular comparison used the local prompt builder, not Docker. We saved the responses for analysis and did not post any comments to GitHub. It was a model-review comparison, not an end-to-end PR-posting test. The separate single-model posting test is described in section seven. The Android changes were not compiled or executed before these reviews.
+
+**Result:** all three models found the four intended issue categories, but the reviews were not identical. Claude returned five findings, including overlapping comments. OpenAI returned four findings and checked the effect on analytics. Gemini returned four findings without using repository tools, but some suggested fixes were incorrect. All three responses passed the response-format and comment-location checks. Total recorded model cost for this comparison was about $0.413 USD.
+
+**Evidence:** [comparison tables, original responses, findings, tokens, costs, and tool use](evidence/model-comparison/README.md), [the prompt](evidence/model-comparison/prompt.txt), [the code changes](evidence/model-comparison/input.diff), and [the preparation report](evidence/model-comparison/preparation.json).
+
+**Open questions and pending work:** this is one controlled example, so it does not establish which model is best overall. Further comparison runs are paused while we review the results and decide the next review approach. Combining findings and posting the combined result remain pending, as listed in section seven.
 
 ### 9. Move the verified local workflow to Fargate — next target
 
