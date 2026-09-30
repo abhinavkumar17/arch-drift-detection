@@ -113,15 +113,22 @@ These earlier preparation tests used an 800,000-token allowance to exercise the 
 
 **Pending work:** Docker currently runs preparation only. Pi review and PR comment posting still run on the laptop and need to be added to the container before we move the full flow to Fargate.
 
-### 5. Integrate Pi and controlled repository lookup locally
+### 5. Run a local code review with Pi
 
-**Why:** a diff may reveal a suspicious dependency without showing its consequences. The reviewer needs a way to inspect related code while controlling context growth and recording its activity.
+**Why we chose Pi:** we needed something to handle the conversation with the model, including requests for more code, rather than build that process ourselves. Pi gave us a way to connect the prepared prompt to a model and continue the review when more information was needed.
 
-**What we did:** the local coordinator starts Pi after preparation passes. Repository-aware review uses read-only file discovery, text search, and line-reading tools over a tracked-source snapshot. Our adapter limits tool work, estimates each request's context, and records usage. Pi manages the model/tool conversation. These are application controls, not an operating-system sandbox.
+**What we tried:** we connected Pi to our prepared prompt and ran a review using only the supplied code changes. We then added three read-only tools to our Pi integration: find files, search the repository, and read relevant lines of code. These were tools we added and restricted for this project, not built-in options we simply switched on. We used them to let the model inspect code beyond the diff.
 
-**Tests and result:** a small Android state-ownership violation produced a finding; a manual reverse/fix case produced none. A five-file settings-reset experiment detected direct datastore access bypassing a repository in both diff-only and lookup-enabled reviews. The lookup run made three searches, three reads, and three model requests, totaling 17,008 reported tokens including repeated/cached context. This demonstrated lookup, not an accuracy improvement over the baseline.
+**Results:** the small Android state-ownership test returned a finding, and a manual reverse/fix test returned none. We then reviewed the five-file settings change with and without repository lookup. Both runs found the direct datastore access that bypassed the repository. With lookup enabled, the model made three searches and three file reads to inspect supporting code.
 
-**Proof:** the [original milestone and per-request table](README-history.md#local-review-milestone--september-27-2026) preserve the earlier results and local artifact location. The newer [three-model checkpoint](evidence/model-comparison/README.md) attaches repository-aware findings and usage directly to the repo. Earlier generated run folders remain local and are not presented as downloadable evidence.
+That lookup run used three model requests and reported 17,008 tokens in total, including repeated and cached input. It showed that the model could use the tools during review. It did not establish that lookup produced a better review than the same test without tools. Our review script saved the findings and run records after Pi completed the conversation.
+
+**Evidence:** the [earlier Pi milestone and per-request results](README-history.md#local-review-milestone--september-27-2026) record the original tests and the location of their local run files. The [later three-model comparison](evidence/model-comparison/README.md) includes published findings and usage records. The original generated run folders remain local.
+
+**Open questions and pending work:**
+
+- Test cases where reading supporting code changes the review outcome, to understand when lookup improves results enough to justify its extra usage.
+- Package Pi review and PR posting in Docker; both still run on the laptop.
 
 ### 6. Broaden review scope and make response handling reliable
 
