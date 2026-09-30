@@ -67,15 +67,13 @@ flowchart TD
 - Verify access to private repositories; the demonstrated PR workflow used a public repository.
 - Set up authentication for running in AWS without an interactive sign-in on a developer's laptop.
 
-### 2. Annotate changes and validate comment locations
+### 2. Check where review comments can be posted
 
-**Why:** a raw diff has hunk coordinates, but a model needs an explicit file, line, and side for each finding. Deleted lines use old-file numbering; added lines use new-file numbering. Mixing these can put a valid observation on the wrong line.
+**Why:** make sure review comments point to the correct line in the PR.
 
-**What we did:** annotation labels added, deleted, and context lines and builds a side-aware allow-list. Production Swift/Kotlin files are commentable; other files remain readable context under the current policy. Validation rejects findings outside allowed changed lines. Annotation provides addresses; it is not intended to compress the diff.
+**Result:** we added checks for comment locations. Local tests confirmed that valid locations are accepted and invalid locations are rejected. These checks validate the location, not whether the model's finding is correct.
 
-**Tests and result:** synthetic annotation tests exercise numbering and allowed locations. The historical investigation found an earlier hunk-based guard rejected 11 of 16 deleted lines and incorrectly accepted 11 context lines; deriving the allow-list from annotated lines corrected that mismatch. Saved Alamofire runs exercise the same approach on larger diffs.
-
-**Proof:** [annotation output](evidence/annotation-test/annotation-run.txt), [large annotation output](evidence/annotation-test/annotation-run-20.txt), [historical test output](evidence/annotation-test/test-run.txt), and [annotation tests](tests/test_annotate.py). The saved test log is a historical snapshot, not the current full-suite result.
+**Evidence:** [annotation test results](evidence/annotation-test/test-run.txt), [saved annotation output](evidence/annotation-test/annotation-run.txt), and [larger-diff annotation output](evidence/annotation-test/annotation-run-20.txt). The test log records the annotation tests from that stage, not the current full test suite.
 
 ### 3. Explore diff budgets, then check the complete prompt
 
