@@ -11,8 +11,6 @@ Build a self-hosted PR reviewer that prioritizes project architecture guidelines
 - **Prompt assembly and budget gates demonstrated:** complete prompts are checked before review, with additional estimated checks during repository-aware review. Oversized preparation stops before calling a model. [Prompt evidence](evidence/prompt-test/pr.diff.report.json) and [Docker overflow proof](evidence/live-docker-test/twenty-commits/summary.json).
 - No AWS/Fargate setup
 
-These are controlled prototype results, not evidence of general review accuracy, production readiness, or superiority over Copilot. The Android fixture was not compiled or executed. Token estimates are approximate; format and location validation do not establish semantic correctness.
-
 ## Local flow
 
 The local PR-to-comment path has been demonstrated. Preparation runs in Docker; Pi and the publisher run on the laptop. OpenRouter supplies the selected model remotely.
