@@ -96,15 +96,22 @@ These earlier preparation tests used an 800,000-token allowance to exercise the 
 - We currently estimate tokens by dividing the character count by three and rounding up. Should we use model-specific token counting or another verified method instead?
 - How should we choose input and output allowances for each model while keeping enough room for useful repository lookups?
 
-### 4. Automate preparation and verify it in Docker
+### 4. Move review preparation into Docker
 
-**Why:** preparation needed one repeatable command, consistent failure handling, and saved evidence rather than manual steps.
+**Why:** we wanted to run the preparation steps together with one command, instead of running each step manually. Docker packages the code and dependencies needed to do that.
 
-**What we tested:** the runner executes preparation tests, acquires or reads a diff, annotates it, assembles the prompt, and records the budget outcome. Later stages stop on failure. Both saved-input and live-fetch Docker runs were exercised.
+**What we tested:** we ran the container with a saved diff and also let it fetch a repository to create the diff. In both cases, it labeled the changed lines, built the prompt, checked its size, and saved the results. If a step failed, the process stopped before continuing.
 
-**Result:** historical Docker validation passed all 27 preparation tests. The live five-commit input fit at 164,857 estimated tokens; the twenty-commit input stopped at 1,449,340 against an 800,000 allowance. No model was called and no files were trimmed. Slight differences from the earlier prompt snapshot reflect separate runs and template versions.
+**Result:** all 27 preparation tests passed in the recorded Docker runs. The smaller input passed the size check. The larger input exceeded the limit and was stopped, as expected. Neither test called a model.
 
-**Proof:** [five-commit summary](evidence/live-docker-test/five-commits/summary.json), [twenty-commit summary](evidence/live-docker-test/twenty-commits/summary.json), and their [saved evidence folders](evidence/live-docker-test). Application test success does not mean the reviewed Android code is defect-free.
+| Docker test | Estimated prompt tokens | Configured test limit | Result |
+| --- | ---: | ---: | --- |
+| Five-commit change | 164,857 | 800,000 | Preparation completed |
+| Twenty-commit change | 1,449,340 | 800,000 | Stopped because the prompt was too large |
+
+**Evidence:** [five-commit run result](evidence/live-docker-test/five-commits/summary.json), [twenty-commit run result](evidence/live-docker-test/twenty-commits/summary.json), and [saved Docker test logs](evidence/live-docker-test). These results belong to the preparation tests recorded at that stage; they do not mean the Android app was built or tested.
+
+**Pending work:** Docker currently runs preparation only. Pi review and PR comment posting still run on the laptop and need to be added to the container before we move the full flow to Fargate.
 
 ### 5. Integrate Pi and controlled repository lookup locally
 
