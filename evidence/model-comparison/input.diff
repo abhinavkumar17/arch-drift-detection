@@ -1,0 +1,452 @@
+diff --git a/feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsViewModel.kt b/feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsViewModel.kt
+--- a/feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsViewModel.kt
++++ b/feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsViewModel.kt
+@@ -19,22 +19,24 @@
+ import androidx.lifecycle.ViewModel
+ import androidx.lifecycle.viewModelScope
+ import com.google.samples.apps.nowinandroid.core.data.repository.UserDataRepository
++import com.google.samples.apps.nowinandroid.core.datastore.NiaPreferencesDataSource
+ import com.google.samples.apps.nowinandroid.core.model.data.DarkThemeConfig
+ import com.google.samples.apps.nowinandroid.core.model.data.ThemeBrand
+ import com.google.samples.apps.nowinandroid.feature.settings.impl.SettingsUiState.Loading
+ import com.google.samples.apps.nowinandroid.feature.settings.impl.SettingsUiState.Success
+ import dagger.hilt.android.lifecycle.HiltViewModel
++import javax.inject.Inject
++import kotlin.time.Duration.Companion.seconds
+ import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
+ import kotlinx.coroutines.flow.StateFlow
+ import kotlinx.coroutines.flow.map
+ import kotlinx.coroutines.flow.stateIn
+ import kotlinx.coroutines.launch
+-import javax.inject.Inject
+-import kotlin.time.Duration.Companion.seconds
+ 
+ @HiltViewModel
+ class SettingsViewModel @Inject constructor(
+     private val userDataRepository: UserDataRepository,
++    private val preferences: NiaPreferencesDataSource,
+ ) : ViewModel() {
+     val settingsUiState: StateFlow<SettingsUiState> =
+         userDataRepository.userData
+@@ -52,6 +54,14 @@
+                 started = WhileSubscribed(5.seconds.inWholeMilliseconds),
+                 initialValue = Loading,
+             )
++
++    fun resetAppearance() {
++        viewModelScope.launch {
++            preferences.setThemeBrand(ThemeBrand.DEFAULT)
++            preferences.setDarkThemeConfig(DarkThemeConfig.FOLLOW_SYSTEM)
++            preferences.setDynamicColorPreference(false)
++        }
++    }
+ 
+     fun updateThemeBrand(themeBrand: ThemeBrand) {
+         viewModelScope.launch {
+diff --git a/feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsDialog.kt b/feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsDialog.kt
+--- a/feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsDialog.kt
++++ b/feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsDialog.kt
+@@ -82,6 +82,7 @@
+         onChangeThemeBrand = viewModel::updateThemeBrand,
+         onChangeDynamicColorPreference = viewModel::updateDynamicColorPreference,
+         onChangeDarkThemeConfig = viewModel::updateDarkThemeConfig,
++        onResetAppearance = viewModel::resetAppearance,
+     )
+ }
+ 
+@@ -93,6 +94,7 @@
+     onChangeThemeBrand: (themeBrand: ThemeBrand) -> Unit,
+     onChangeDynamicColorPreference: (useDynamicColor: Boolean) -> Unit,
+     onChangeDarkThemeConfig: (darkThemeConfig: DarkThemeConfig) -> Unit,
++    onResetAppearance: () -> Unit = {},
+ ) {
+     val configuration = LocalConfiguration.current
+ 
+@@ -135,6 +137,14 @@
+                     }
+                 }
+                 HorizontalDivider(Modifier.padding(top = 8.dp))
++                if (settingsUiState is Success) {
++                    NiaTextButton(onClick = {
++                        Thread.sleep(5_000)
++                        onResetAppearance()
++                    }) {
++                        Text(stringResource(string.feature_settings_impl_reset_appearance))
++                    }
++                }
+                 LinksPanel()
+             }
+             TrackScreenViewEvent(screenName = "Settings")
+diff --git a/feature/settings/impl/src/main/res/values/strings.xml b/feature/settings/impl/src/main/res/values/strings.xml
+--- a/feature/settings/impl/src/main/res/values/strings.xml
++++ b/feature/settings/impl/src/main/res/values/strings.xml
+@@ -34,4 +34,5 @@
+     <string name="feature_settings_impl_dynamic_color_yes">Yes</string>
+     <string name="feature_settings_impl_dynamic_color_no">No</string>
+     <string name="feature_settings_impl_dismiss_dialog_button_text">OK</string>
++    <string name="feature_settings_impl_reset_appearance">Reset appearance</string>
+ </resources>
+diff --git a/feature/settings/impl/build.gradle.kts b/feature/settings/impl/build.gradle.kts
+--- a/feature/settings/impl/build.gradle.kts
++++ b/feature/settings/impl/build.gradle.kts
+@@ -28,8 +28,10 @@
+     implementation(libs.androidx.appcompat)
+     implementation(libs.google.oss.licenses)
+     implementation(projects.core.data)
++    implementation(projects.core.datastore)
+ 
+     testImplementation(projects.core.testing)
++    testImplementation(projects.core.datastoreTest)
+ 
+     androidTestImplementation(libs.bundles.androidx.compose.ui.test)
+ }
+diff --git a/feature/settings/impl/src/test/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsViewModelTest.kt b/feature/settings/impl/src/test/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsViewModelTest.kt
+--- a/feature/settings/impl/src/test/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsViewModelTest.kt
++++ b/feature/settings/impl/src/test/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsViewModelTest.kt
+@@ -16,20 +16,26 @@
+ 
+ package com.google.samples.apps.nowinandroid.feature.settings.impl
+ 
++import com.google.samples.apps.nowinandroid.core.datastore.NiaPreferencesDataSource
++import com.google.samples.apps.nowinandroid.core.datastore.UserPreferences
++import com.google.samples.apps.nowinandroid.core.datastore.test.InMemoryDataStore
+ import com.google.samples.apps.nowinandroid.core.model.data.DarkThemeConfig.DARK
++import com.google.samples.apps.nowinandroid.core.model.data.DarkThemeConfig.FOLLOW_SYSTEM
+ import com.google.samples.apps.nowinandroid.core.model.data.ThemeBrand.ANDROID
++import com.google.samples.apps.nowinandroid.core.model.data.ThemeBrand.DEFAULT
+ import com.google.samples.apps.nowinandroid.core.testing.repository.TestUserDataRepository
+ import com.google.samples.apps.nowinandroid.core.testing.util.MainDispatcherRule
+ import com.google.samples.apps.nowinandroid.feature.settings.impl.SettingsUiState.Loading
+ import com.google.samples.apps.nowinandroid.feature.settings.impl.SettingsUiState.Success
++import kotlin.test.assertEquals
+ import kotlinx.coroutines.flow.collect
++import kotlinx.coroutines.flow.first
+ import kotlinx.coroutines.launch
+ import kotlinx.coroutines.test.UnconfinedTestDispatcher
+ import kotlinx.coroutines.test.runTest
+ import org.junit.Before
+ import org.junit.Rule
+ import org.junit.Test
+-import kotlin.test.assertEquals
+ 
+ class SettingsViewModelTest {
+ 
+@@ -38,11 +44,13 @@
+ 
+     private val userDataRepository = TestUserDataRepository()
+ 
++    private val preferences = NiaPreferencesDataSource(InMemoryDataStore(UserPreferences.getDefaultInstance()))
++
+     private lateinit var viewModel: SettingsViewModel
+ 
+     @Before
+     fun setup() {
+-        viewModel = SettingsViewModel(userDataRepository)
++        viewModel = SettingsViewModel(userDataRepository, preferences)
+     }
+ 
+     @Test
+@@ -68,4 +76,17 @@
+             viewModel.settingsUiState.value,
+         )
+     }
++
++    @Test
++    fun resetAppearance_restoresDefaultValues() = runTest {
++        preferences.setThemeBrand(ANDROID)
++        preferences.setDarkThemeConfig(DARK)
++        preferences.setDynamicColorPreference(true)
++
++        viewModel.resetAppearance()
++        val actual = preferences.userData.first()
++        assertEquals(DEFAULT, actual.themeBrand)
++        assertEquals(FOLLOW_SYSTEM, actual.darkThemeConfig)
++        assertEquals(false, actual.useDynamicColor)
++    }
+ }
+diff --git a/feature/settings/impl/src/androidTest/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsDialogTest.kt b/feature/settings/impl/src/androidTest/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsDialogTest.kt
+--- a/feature/settings/impl/src/androidTest/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsDialogTest.kt
++++ b/feature/settings/impl/src/androidTest/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsDialogTest.kt
+@@ -182,4 +182,20 @@
+         composeTestRule.onNodeWithText(getString(R.string.feature_settings_impl_brand_guidelines)).assertExists()
+         composeTestRule.onNodeWithText(getString(R.string.feature_settings_impl_feedback)).assertExists()
+     }
++
++    @Test
++    fun whenReady_resetAppearanceIsDisplayed() {
++        composeTestRule.setContent {
++            SettingsDialog(
++                settingsUiState = Success(UserEditableSettings(ANDROID, false, DARK)),
++                onDismiss = {},
++                onChangeThemeBrand = {},
++                onChangeDynamicColorPreference = {},
++                onChangeDarkThemeConfig = {},
++                onResetAppearance = {},
++            )
++        }
++        composeTestRule.onNodeWithText(getString(R.string.feature_settings_impl_reset_appearance))
++            .assertExists()
++    }
+ }
+diff --git a/feature/bookmarks/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksViewModel.kt b/feature/bookmarks/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksViewModel.kt
+--- a/feature/bookmarks/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksViewModel.kt
++++ b/feature/bookmarks/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksViewModel.kt
+@@ -42,7 +42,7 @@
+ ) : ViewModel() {
+ 
+     var shouldDisplayUndoBookmark by mutableStateOf(false)
+-    private var lastRemovedBookmarkId: String? = null
++    var lastRemovedBookmarkId: String? = null
+ 
+     val feedUiState: StateFlow<NewsFeedUiState> =
+         userNewsResourceRepository.observeAllBookmarked()
+@@ -53,6 +53,14 @@
+                 started = SharingStarted.WhileSubscribed(5_000),
+                 initialValue = Loading,
+             )
++
++    fun markAllSavedResourcesRead() {
++        val ids = (feedUiState.value as? NewsFeedUiState.Success)
++            ?.feed?.map { it.id }?.toSet() ?: return
++        viewModelScope.launch {
++            userDataRepository.markNewsResourcesRead(ids)
++        }
++    }
+ 
+     fun removeFromSavedResources(newsResourceId: String) {
+         viewModelScope.launch {
+diff --git a/feature/bookmarks/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksScreen.kt b/feature/bookmarks/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksScreen.kt
+--- a/feature/bookmarks/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksScreen.kt
++++ b/feature/bookmarks/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksScreen.kt
+@@ -61,6 +61,7 @@
+ import androidx.lifecycle.compose.LifecycleEventEffect
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import com.google.samples.apps.nowinandroid.core.designsystem.component.NiaLoadingWheel
++import com.google.samples.apps.nowinandroid.core.designsystem.component.NiaTextButton
+ import com.google.samples.apps.nowinandroid.core.designsystem.component.scrollbar.DraggableScrollbar
+ import com.google.samples.apps.nowinandroid.core.designsystem.component.scrollbar.rememberDraggableScroller
+ import com.google.samples.apps.nowinandroid.core.designsystem.component.scrollbar.scrollbarState
+@@ -93,7 +94,11 @@
+         modifier = modifier,
+         shouldDisplayUndoBookmark = viewModel.shouldDisplayUndoBookmark,
+         undoBookmarkRemoval = viewModel::undoBookmarkRemoval,
+-        clearUndoState = viewModel::clearUndoState,
++        clearUndoState = {
++            viewModel.shouldDisplayUndoBookmark = false
++            viewModel.lastRemovedBookmarkId = null
++        },
++        onMarkAllRead = viewModel::markAllSavedResourcesRead,
+     )
+ }
+ 
+@@ -112,6 +117,7 @@
+     shouldDisplayUndoBookmark: Boolean = false,
+     undoBookmarkRemoval: () -> Unit = {},
+     clearUndoState: () -> Unit = {},
++    onMarkAllRead: () -> Unit = {},
+ ) {
+     val bookmarkRemovedMessage = stringResource(id = R.string.feature_bookmarks_api_removed)
+     val undoText = stringResource(id = R.string.feature_bookmarks_api_undo)
+@@ -140,6 +146,7 @@
+                 onNewsResourceViewed,
+                 onTopicClick,
+                 modifier,
++                onMarkAllRead,
+             )
+         } else {
+             EmptyState(modifier)
+@@ -167,6 +174,7 @@
+     onNewsResourceViewed: (String) -> Unit,
+     onTopicClick: (String) -> Unit,
+     modifier: Modifier = Modifier,
++    onMarkAllRead: () -> Unit = {},
+ ) {
+     val scrollableState = rememberLazyStaggeredGridState()
+     TrackScrollJank(scrollableState = scrollableState, stateName = "bookmarks:grid")
+@@ -174,24 +182,29 @@
+         modifier = modifier
+             .fillMaxSize(),
+     ) {
+-        LazyVerticalStaggeredGrid(
+-            columns = StaggeredGridCells.Adaptive(300.dp),
+-            contentPadding = PaddingValues(16.dp),
+-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+-            verticalItemSpacing = 24.dp,
+-            state = scrollableState,
+-            modifier = Modifier
+-                .fillMaxSize()
+-                .testTag("bookmarks:feed"),
+-        ) {
+-            newsFeed(
+-                feedState = feedState,
+-                onNewsResourcesCheckedChanged = { id, _ -> removeFromBookmarks(id) },
+-                onNewsResourceViewed = onNewsResourceViewed,
+-                onTopicClick = onTopicClick,
+-            )
+-            item(span = StaggeredGridItemSpan.FullLine) {
+-                Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.safeDrawing))
++        Column {
++            NiaTextButton(onClick = onMarkAllRead) {
++                Text(stringResource(R.string.feature_bookmarks_api_mark_all_read))
++            }
++            LazyVerticalStaggeredGrid(
++                columns = StaggeredGridCells.Adaptive(300.dp),
++                contentPadding = PaddingValues(16.dp),
++                horizontalArrangement = Arrangement.spacedBy(16.dp),
++                verticalItemSpacing = 24.dp,
++                state = scrollableState,
++                modifier = Modifier
++                    .fillMaxSize()
++                    .testTag("bookmarks:feed"),
++            ) {
++                newsFeed(
++                    feedState = feedState,
++                    onNewsResourcesCheckedChanged = { id, _ -> removeFromBookmarks(id) },
++                    onNewsResourceViewed = onNewsResourceViewed,
++                    onTopicClick = onTopicClick,
++                )
++                item(span = StaggeredGridItemSpan.FullLine) {
++                    Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.safeDrawing))
++                }
+             }
+         }
+         val itemsAvailable = when (feedState) {
+diff --git a/feature/bookmarks/api/src/main/res/values/strings.xml b/feature/bookmarks/api/src/main/res/values/strings.xml
+--- a/feature/bookmarks/api/src/main/res/values/strings.xml
++++ b/feature/bookmarks/api/src/main/res/values/strings.xml
+@@ -21,4 +21,5 @@
+     <string name="feature_bookmarks_api_empty_description">Updates you save will be stored here\nto read later</string>
+     <string name="feature_bookmarks_api_removed">Bookmark removed</string>
+     <string name="feature_bookmarks_api_undo">UNDO</string>
++    <string name="feature_bookmarks_api_mark_all_read">Mark all saved articles read</string>
+ </resources>
+diff --git a/feature/bookmarks/impl/src/test/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksViewModelTest.kt b/feature/bookmarks/impl/src/test/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksViewModelTest.kt
+--- a/feature/bookmarks/impl/src/test/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksViewModelTest.kt
++++ b/feature/bookmarks/impl/src/test/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksViewModelTest.kt
+@@ -24,17 +24,18 @@
+ import com.google.samples.apps.nowinandroid.core.ui.NewsFeedUiState.Loading
+ import com.google.samples.apps.nowinandroid.core.ui.NewsFeedUiState.Success
+ import com.google.samples.apps.nowinandroid.feature.bookmarks.impl.BookmarksViewModel
++import kotlin.test.assertEquals
++import kotlin.test.assertFalse
++import kotlin.test.assertIs
++import kotlin.test.assertTrue
+ import kotlinx.coroutines.flow.collect
++import kotlinx.coroutines.flow.first
+ import kotlinx.coroutines.launch
+ import kotlinx.coroutines.test.UnconfinedTestDispatcher
+ import kotlinx.coroutines.test.runTest
+ import org.junit.Before
+ import org.junit.Rule
+ import org.junit.Test
+-import kotlin.test.assertEquals
+-import kotlin.test.assertFalse
+-import kotlin.test.assertIs
+-import kotlin.test.assertTrue
+ 
+ /**
+  * To learn more about how this test handles Flows created with stateIn, see
+@@ -134,4 +135,23 @@
+         assertIs<Success>(item)
+         assertEquals(1, item.feed.size)
+     }
++
++    @Test
++    fun markAllSavedResourcesRead_marksOnlySavedArticles() = runTest {
++        backgroundScope.launch(UnconfinedTestDispatcher()) { viewModel.feedUiState.collect() }
++        newsRepository.sendNewsResources(newsResourcesTestData)
++        userDataRepository.setNewsResourceBookmarked(newsResourcesTestData[0].id, true)
++        userDataRepository.setNewsResourceBookmarked(newsResourcesTestData[1].id, true)
++
++        viewModel.markAllSavedResourcesRead()
++
++        val state = viewModel.feedUiState.value
++        assertIs<Success>(state)
++        assertEquals(2, state.feed.size)
++        assertTrue(state.feed.all { it.hasBeenViewed })
++        assertEquals(
++            setOf(newsResourcesTestData[0].id, newsResourcesTestData[1].id),
++            userDataRepository.userData.first().viewedNewsResources,
++        )
++    }
+ }
+diff --git a/core/data/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/UserDataRepository.kt b/core/data/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/UserDataRepository.kt
+--- a/core/data/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/UserDataRepository.kt
++++ b/core/data/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/UserDataRepository.kt
+@@ -43,6 +43,9 @@
+      */
+     suspend fun setNewsResourceBookmarked(newsResourceId: String, bookmarked: Boolean)
+ 
++    /** Marks the supplied articles as read, preserving other read and bookmark state. */
++    suspend fun markNewsResourcesRead(newsResourceIds: Set<String>)
++
+     /**
+      * Updates the viewed status for a news resource
+      */
+diff --git a/core/data/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/OfflineFirstUserDataRepository.kt b/core/data/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/OfflineFirstUserDataRepository.kt
+--- a/core/data/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/OfflineFirstUserDataRepository.kt
++++ b/core/data/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/OfflineFirstUserDataRepository.kt
+@@ -50,6 +50,12 @@
+         )
+     }
+ 
++    override suspend fun markNewsResourcesRead(newsResourceIds: Set<String>) {
++        newsResourceIds.forEach { id ->
++            niaPreferencesDataSource.setNewsResourceViewed(id, false)
++        }
++    }
++
+     override suspend fun setNewsResourceViewed(newsResourceId: String, viewed: Boolean) =
+         niaPreferencesDataSource.setNewsResourceViewed(newsResourceId, viewed)
+ 
+diff --git a/core/data-test/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/test/repository/FakeUserDataRepository.kt b/core/data-test/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/test/repository/FakeUserDataRepository.kt
+--- a/core/data-test/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/test/repository/FakeUserDataRepository.kt
++++ b/core/data-test/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/test/repository/FakeUserDataRepository.kt
+@@ -47,6 +47,12 @@
+         niaPreferencesDataSource.setNewsResourceBookmarked(newsResourceId, bookmarked)
+     }
+ 
++    override suspend fun markNewsResourcesRead(newsResourceIds: Set<String>) {
++        newsResourceIds.forEach { id ->
++            niaPreferencesDataSource.setNewsResourceViewed(id, true)
++        }
++    }
++
+     override suspend fun setNewsResourceViewed(newsResourceId: String, viewed: Boolean) =
+         niaPreferencesDataSource.setNewsResourceViewed(newsResourceId, viewed)
+ 
+diff --git a/core/testing/src/main/kotlin/com/google/samples/apps/nowinandroid/core/testing/repository/TestUserDataRepository.kt b/core/testing/src/main/kotlin/com/google/samples/apps/nowinandroid/core/testing/repository/TestUserDataRepository.kt
+--- a/core/testing/src/main/kotlin/com/google/samples/apps/nowinandroid/core/testing/repository/TestUserDataRepository.kt
++++ b/core/testing/src/main/kotlin/com/google/samples/apps/nowinandroid/core/testing/repository/TestUserDataRepository.kt
+@@ -73,6 +73,11 @@
+         }
+     }
+ 
++    override suspend fun markNewsResourcesRead(newsResourceIds: Set<String>) {
++        val current = currentUserData
++        _userData.tryEmit(current.copy(viewedNewsResources = current.viewedNewsResources + newsResourceIds))
++    }
++
+     override suspend fun setNewsResourceViewed(newsResourceId: String, viewed: Boolean) {
+         currentUserData.let { current ->
+             _userData.tryEmit(
+diff --git a/core/data/src/test/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/OfflineFirstUserDataRepositoryTest.kt b/core/data/src/test/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/OfflineFirstUserDataRepositoryTest.kt
+--- a/core/data/src/test/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/OfflineFirstUserDataRepositoryTest.kt
++++ b/core/data/src/test/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/OfflineFirstUserDataRepositoryTest.kt
+@@ -256,4 +256,16 @@
+             subject.setFollowedTopicIds(emptySet())
+             assertFalse(subject.userData.first().shouldHideOnboarding)
+         }
++
++    @Test
++    fun markNewsResourcesRead_preservesExistingReadAndBookmarkState() = testScope.runTest {
++        subject.setNewsResourceViewed("existing", true)
++        subject.setNewsResourceBookmarked("first", true)
++
++        subject.markNewsResourcesRead(setOf("first", "second"))
++
++        val actual = subject.userData.first()
++        assertEquals(setOf("existing", "first", "second"), actual.viewedNewsResources)
++        assertEquals(setOf("first"), actual.bookmarkedNewsResources)
++    }
+ }

@@ -1,0 +1,11 @@
+{
+  "provider": "openrouter",
+  "model": "google/gemini-2.5-pro",
+  "exit_code": 0,
+  "elapsed_seconds": 28.4,
+  "raw_json_only": false,
+  "status": "review_completed",
+  "findings": 4,
+  "usage_events": 1,
+  "reported_cost_usd": 0.042868750000000004
+}

@@ -1,0 +1,59 @@
+{
+  "findings": [
+    {
+      "path": "feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsDialog.kt",
+      "line": 142,
+      "side": "RIGHT",
+      "principle": "Correctness / do not block the main thread",
+      "title": "Thread.sleep called on the UI thread inside a button click handler",
+      "explanation": "`Thread.sleep(5_000)` is executed synchronously inside the `onClick` lambda of the Reset Appearance button. Click callbacks in Compose run on the main thread, so this freezes the UI for five full seconds on every press, preventing any rendering or input. On Android, the system's ANR watchdog triggers after five seconds of main-thread unresponsiveness, meaning this call is right at the threshold for an ANR dialog. There is no signal that this is an intentional delay; it appears to be debug scaffolding that was accidentally committed.",
+      "evidence": "NEW:L141–L143: `NiaTextButton(onClick = { Thread.sleep(5_000); onResetAppearance() })`",
+      "suggested_change": "Remove the `Thread.sleep(5_000)` call entirely. If a deliberate delay is needed for testing, use a coroutine-based `delay()` inside the ViewModel's coroutine scope, not a blocking sleep on the click callback."
+    },
+    {
+      "path": "core/data/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/OfflineFirstUserDataRepository.kt",
+      "line": 55,
+      "side": "RIGHT",
+      "principle": "Correctness / implementation must match the declared contract",
+      "title": "markNewsResourcesRead marks resources as unread (passes false instead of true)",
+      "explanation": "`markNewsResourcesRead` is documented as marking the supplied articles as read. Its implementation calls `niaPreferencesDataSource.setNewsResourceViewed(id, false)`, which sets viewed = false, i.e. marks them as *unread*. Every call to this method through the repository will silently do the opposite of its name and javadoc. The `FakeUserDataRepository` in the same diff correctly passes `true`, confirming the real implementation is inverted.",
+      "evidence": "NEW:L55: `niaPreferencesDataSource.setNewsResourceViewed(id, false)` vs. FakeUserDataRepository CTX:L52: `niaPreferencesDataSource.setNewsResourceViewed(id, true)`",
+      "suggested_change": "Change the argument from `false` to `true`: `niaPreferencesDataSource.setNewsResourceViewed(id, true)`."
+    },
+    {
+      "path": "feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsViewModel.kt",
+      "line": 39,
+      "side": "RIGHT",
+      "principle": "Architecture guideline 2 — Depend on what a component provides, not how it is built; Architecture guideline 1 — Keep screen logic separate from data access",
+      "title": "SettingsViewModel depends directly on the concrete NiaPreferencesDataSource instead of the repository",
+      "explanation": "The `resetAppearance` function (lines 58–64) calls `preferences.setThemeBrand`, `preferences.setDarkThemeConfig`, and `preferences.setDynamicColorPreference` directly on `NiaPreferencesDataSource`, a concrete DataStore-backed class. The ViewModel already depends on `UserDataRepository` (an interface) for all other writes; introducing a second, lower-level dependency ties the screen's logic to a specific storage implementation. If the storage layer changes (e.g. migrating to a different data store), the ViewModel must also change. Guideline 2 calls out that the ViewModel should depend on a contract, not an implementation; guideline 1 calls out that data-access details belong behind the repository.",
+      "evidence": "NEW:L39: `private val preferences: NiaPreferencesDataSource`; NEW:L60–62: direct calls to `preferences.setThemeBrand / setDarkThemeConfig / setDynamicColorPreference`",
+      "suggested_change": "Add a `resetAppearance()` method to `UserDataRepository` (the existing interface), implement it in `OfflineFirstUserDataRepository` by delegating to `niaPreferencesDataSource`, and call `userDataRepository.resetAppearance()` from the ViewModel. Remove the `NiaPreferencesDataSource` constructor parameter and the `core.datastore` dependency from the `:feature:settings:impl` module."
+    },
+    {
+      "path": "feature/bookmarks/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksScreen.kt",
+      "line": 98,
+      "side": "RIGHT",
+      "principle": "Architecture guideline 3 — Give shared state a clear owner",
+      "title": "UI directly overwrites ViewModel state instead of calling the existing ViewModel action",
+      "explanation": "The `clearUndoState` lambda passed from the screen now directly assigns `viewModel.shouldDisplayUndoBookmark = false` and `viewModel.lastRemovedBookmarkId = null`. The ViewModel already has a `clearUndoState()` function that performs exactly these same assignments (confirmed in the repository at BookmarksViewModel.kt lines 88–91). Bypassing that function spreads state-mutation logic into the UI and breaks the single-owner model described in guideline 3: decisions about when and why state changes should belong in the ViewModel, not duplicated in UI callbacks.",
+      "evidence": "NEW:L97–L100: `clearUndoState = { viewModel.shouldDisplayUndoBookmark = false; viewModel.lastRemovedBookmarkId = null }`; ViewModel still exposes `fun clearUndoState()` at line 88.",
+      "suggested_change": "Revert `clearUndoState` to `viewModel::clearUndoState` (restoring the pre-diff pattern). The ViewModel method already has the same logic and is the correct single owner of this state transition."
+    },
+    {
+      "path": "feature/bookmarks/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksViewModel.kt",
+      "line": 45,
+      "side": "RIGHT",
+      "principle": "Architecture guideline 3 — Give shared state a clear owner",
+      "title": "lastRemovedBookmarkId widened from private to public, allowing external mutation",
+      "explanation": "`lastRemovedBookmarkId` was `private`; the change makes it a public `var`, which was required to support the screen directly writing `null` to it (BookmarksScreen.kt lines 98–100). Making internal ViewModel state writable from outside the ViewModel means any caller can invalidate it without going through the ViewModel's own logic, creating the multiple-writer problem that guideline 3 is designed to prevent.",
+      "evidence": "OLD:L45: `private var lastRemovedBookmarkId: String? = null` → NEW:L45: `var lastRemovedBookmarkId: String? = null`",
+      "suggested_change": "Restore `private` visibility. The existing `clearUndoState()` method is the correct entry point for resetting this field, and restoring the `viewModel::clearUndoState` reference in BookmarksScreen.kt (see related finding) removes the need to expose this field."
+    }
+  ],
+  "limitations": [
+    "The full body of SettingsViewModel (lines 43–53 in context) was not shown, so any additional data-access pattern within that range could not be verified.",
+    "The BookmarksScreen function that houses the 'Mark all read' button (around line 184) is only partially visible; whether the button is also shown in the loading state could not be fully confirmed from the diff alone.",
+    "NiaPreferencesDataSource.setNewsResourceViewed signature was inferred from usage; the full method body was not read, though the boolean argument difference between the real and fake implementations is unambiguous."
+  ]
+}

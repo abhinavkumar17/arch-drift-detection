@@ -1,0 +1,32 @@
+[
+  {
+    "model": "anthropic/claude-sonnet-4.6",
+    "findings": 5,
+    "raw_json": true,
+    "validated": "review_completed",
+    "seconds": 86.8,
+    "recorded_usd": 0.13466265000000002,
+    "tool_calls": 4,
+    "tokens": 45724
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "findings": 4,
+    "raw_json": true,
+    "validated": "review_completed",
+    "seconds": 47.3,
+    "recorded_usd": 0.23511300000000002,
+    "tool_calls": 11,
+    "tokens": 95572
+  },
+  {
+    "model": "google/gemini-2.5-pro",
+    "findings": 4,
+    "raw_json": false,
+    "validated": "review_completed",
+    "seconds": 28.4,
+    "recorded_usd": 0.042868750000000004,
+    "tool_calls": 0,
+    "tokens": 13925
+  }
+]

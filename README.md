@@ -1,469 +1,141 @@
-# arch-drift-detection
+# Architecture drift review
 
 ## Objective and approach
 
-Build a self-hosted architecture-review bot that checks code changes against project guidelines and ultimately posts supported findings on pull requests.
-
-We validate the review locally first: prepare a complete prompt, check its budget, let Pi coordinate model review and controlled repository lookup, then validate and save the result. The proposed AWS deployment moves that workflow into an on-demand Fargate task triggered by GitHub events.
+Build a self-hosted PR reviewer that prioritizes project architecture guidelines while allowing other supported correctness findings. Assemble an annotated diff and review instructions, enforce estimated context budgets, let Pi coordinate model review and read-only repository lookup, validate the response, and publish supported findings to changed PR lines.
 
 ## Current results
 
-- One local command completes preparation, Pi review, response validation, and evidence saving.
-- A minimal Android violation and a five-file repository-bypass experiment returned the intended findings; the manual reverse/fix test returned no findings.
-- The five-file run recorded three searches, three reads, and three model requests within the estimated context allowance. This proves lookup works, not improved accuracy over the diff-only baseline.
-- A manual Fargate preparation run saved evidence to S3. Complete model review in AWS remains pending.
+- **Local PR-to-comment loop demonstrated:** a saved review was posted to the intended Android PR line; repeating publication detected the existing review. [Posted test comment](https://github.com/abhinavkumar17/nowinandroid/pull/1#discussion_r4117992844).
+- **Three-model comparison complete:** Claude Sonnet 4.6, OpenAI GPT 5.5, and Gemini 2.5 Pro found all four seeded issue categories in the same fifteen-file fixture. Fix quality, duplication, tool use, and cost differed. Total recorded model cost was about **$0.413 USD**. [Findings, cost, tokens, tools, and original responses](evidence/model-comparison/README.md).
+- **Prompt assembly and budget gates demonstrated:** complete prompts are checked before review, with additional estimated checks during repository-aware review. Oversized preparation stops before calling a model. [Prompt evidence](evidence/prompt-test/pr.diff.report.json) and [Docker overflow proof](evidence/live-docker-test/twenty-commits/summary.json).
+- **Cloud preparation only demonstrated:** a manual Fargate preparation run uploaded evidence to S3. The full model-review and publishing flow has not yet been verified in AWS.
 
-## How the pipeline works
+These are controlled prototype results, not evidence of general review accuracy, production readiness, or superiority over Copilot. The Android fixture was not compiled or executed. Token estimates are approximate; format and location validation do not establish semantic correctness.
 
-**Implemented local flow:** saved diff → annotation → complete prompt assembly → initial budget check → Pi review with optional source lookup → response validation → local evidence.
+## Implemented workflow
 
-Docker runs preparation. The local coordinator starts Pi on the host after preparation passes. Each repository-aware model request has an additional estimated context check. The current complete-prompt path does not run the earlier diff-only packer or trim files to fit.
+PR revisions or saved diff → annotation and prompt assembly → budget gate → Pi/model with optional repository lookup → finding validation → saved evidence → publication preview → explicit posting.
 
-**Planned cloud flow:** qualifying PR event → webhook validation → Fargate task → acquire repository and diff → prepare and review → save evidence → post review comments. This full sequence is not deployed yet.
+Both review entry points now require OpenRouter; the default model is Claude Sonnet 4.6. Automated reviews do not fall back to Codex sign-in. Provider access and model usage are separate from this project's development chat.
 
-## Status
+The usual local workflow uses Docker for preparation and Pi on the host. The fifteen-file comparison used local preparation. The current Docker image does **not** package the full review and publishing workflow.
 
-| Area | Verified status |
+## Development milestones: why, tests, and evidence
+
+### 1. Acquire a reproducible diff
+
+**Why:** a review needs an identifiable code change. Moving branch names alone are insufficient for reproducing a result or posting to the right revision.
+
+**What we did:** first used saved Alamofire diffs, then verified live repository fetching in Docker. The later local PR coordinator fetches fixed base/head commits into a separate checkout, derives the diff from their merge base, and records the revisions. It checks for revision changes before treating a review as current.
+
+**Result and proof:** saved inputs make the early experiments repeatable; live preparation demonstrated repository-to-diff acquisition. See the [small saved diff](evidence/annotation-test/pr.diff), [large saved diff](evidence/annotation-test/pr-20.diff), and [live five-commit run](evidence/live-docker-test/five-commits/summary.json). Private-repository and unattended cloud authentication remain pending.
+
+### 2. Annotate changes and validate comment locations
+
+**Why:** a raw diff has hunk coordinates, but a model needs an explicit file, line, and side for each finding. Deleted lines use old-file numbering; added lines use new-file numbering. Mixing these can put a valid observation on the wrong line.
+
+**What we did:** annotation labels added, deleted, and context lines and builds a side-aware allow-list. Production Swift/Kotlin files are commentable; other files remain readable context under the current policy. Validation rejects findings outside allowed changed lines. Annotation provides addresses; it is not intended to compress the diff.
+
+**Tests and result:** synthetic annotation tests exercise numbering and allowed locations. The historical investigation found an earlier hunk-based guard rejected 11 of 16 deleted lines and incorrectly accepted 11 context lines; deriving the allow-list from annotated lines corrected that mismatch. Saved Alamofire runs exercise the same approach on larger diffs.
+
+**Proof:** [annotation output](evidence/annotation-test/annotation-run.txt), [large annotation output](evidence/annotation-test/annotation-run-20.txt), [historical test output](evidence/annotation-test/test-run.txt), and [annotation tests](tests/test_annotate.py). The saved test log is a historical snapshot, not the current full-suite result.
+
+### 3. Explore diff budgets, then check the complete prompt
+
+**Why:** counting only the diff misses instructions, guidelines, and output requirements. We needed evidence that the final assembled input is checked before a model is called.
+
+**First experiment — diff-only packing:** the packer kept file blocks until an 800,000-token estimated allowance was reached. The small saved run kept 161,335 estimated tokens; the large run kept 799,214 and excluded 48 files. This demonstrated size enforcement, but could omit review context. [Small packing log](evidence/annotation-test/pack-run.txt), [large packing log](evidence/annotation-test/pack-run-20.txt).
+
+**Current approach — assemble first, then gate:** insert guidelines and all annotated diff blocks into the template, estimate the complete prompt, and stop if it exceeds the configured allowance. The complete-prompt path does not trim files to make the input fit.
+
+| Historical complete-prompt test | Estimated input tokens | Allowance | Result |
+| --- | ---: | ---: | --- |
+| Small saved diff | 164,870 | 800,000 | Fits |
+| Large saved diff | 1,449,353 | 800,000 | Correctly rejected as oversized |
+
+**Proof:** [small assembled prompt](evidence/prompt-test/pr.diff.prompt.txt), [small report](evidence/prompt-test/pr.diff.report.json), [large assembled prompt](evidence/prompt-test/pr-20.diff.prompt.txt), and [large report](evidence/prompt-test/pr-20.diff.report.json). Reports include input fingerprints. The large case passed its expected-overflow test; it did not pass for submission to a model.
+
+**Limit:** these historical allowances are experiment settings, not current model limits. All these checks use character count divided by three, rounded up. They prove the gate's behavior, not exact tokenizer-level context fit or a spending cap.
+
+### 4. Automate preparation and verify it in Docker
+
+**Why:** preparation needed one repeatable command, consistent failure handling, and saved evidence rather than manual steps.
+
+**What we tested:** the runner executes preparation tests, acquires or reads a diff, annotates it, assembles the prompt, and records the budget outcome. Later stages stop on failure. Both saved-input and live-fetch Docker runs were exercised.
+
+**Result:** historical Docker validation passed all 27 preparation tests. The live five-commit input fit at 164,857 estimated tokens; the twenty-commit input stopped at 1,449,340 against an 800,000 allowance. No model was called and no files were trimmed. Slight differences from the earlier prompt snapshot reflect separate runs and template versions.
+
+**Proof:** [five-commit summary](evidence/live-docker-test/five-commits/summary.json), [twenty-commit summary](evidence/live-docker-test/twenty-commits/summary.json), and their [saved evidence folders](evidence/live-docker-test). Application test success does not mean the reviewed Android code is defect-free.
+
+### 5. Integrate Pi and controlled repository lookup locally
+
+**Why:** a diff may reveal a suspicious dependency without showing its consequences. The reviewer needs a way to inspect related code while controlling context growth and recording its activity.
+
+**What we did:** the local coordinator starts Pi after preparation passes. Repository-aware review uses read-only file discovery, text search, and line-reading tools over a tracked-source snapshot. Our adapter limits tool work, estimates each request's context, and records usage. Pi manages the model/tool conversation. These are application controls, not an operating-system sandbox.
+
+**Tests and result:** a small Android state-ownership violation produced a finding; a manual reverse/fix case produced none. A five-file settings-reset experiment detected direct datastore access bypassing a repository in both diff-only and lookup-enabled reviews. The lookup run made three searches, three reads, and three model requests, totaling 17,008 reported tokens including repeated/cached context. This demonstrated lookup, not an accuracy improvement over the baseline.
+
+**Proof:** the [original milestone and per-request table](README-history.md#local-review-milestone--september-27-2026) preserve the earlier results and local artifact location. The newer [three-model checkpoint](evidence/model-comparison/README.md) attaches repository-aware findings and usage directly to the repo. Earlier generated run folders remain local and are not presented as downloadable evidence.
+
+### 6. Broaden review scope and make response handling reliable
+
+**Why:** architecture guidelines should guide attention without suppressing genuine correctness defects. Separately, useful findings should not be lost merely because a model wraps JSON in Markdown.
+
+**What we tested:** the original architecture-focused instructions missed a synthetic blocking-code problem; broader instructions detected it. We aligned the template and Pi adapter, then checked architecture violation, blocking defect, and valid-change cases. Models detected the intended defects, but several responses failed the old raw-JSON-only parser.
+
+**Change and result:** the parser now accepts a single unambiguous JSON object surrounded by prose or Markdown, while rejecting malformed or ambiguous responses and still validating fields and locations. The template requests JSON only. The previous offline verification reported 87 passing Python tests and successful parsing/location checks for all nine saved responses; no new model calls were needed for that fix. This documentation edit does not rerun those tests.
+
+**Proof and limit:** format tests (local, not yet published), publisher tests (local, not yet published), and [new comparison responses and validation results](evidence/model-comparison/README.md). The earlier three-case response sets remain local. Parser acceptance is distinct from whether a suggested fix is correct.
+
+### 7. Complete the local PR-to-comment loop
+
+**Why:** producing a finding locally is only part of the goal; it must reach the intended changed line on the reviewed PR without being stale or duplicated.
+
+**What we did:** the PR coordinator records exact revisions. The publisher creates a preview, checks current revisions, submits against the reviewed commit, and records publication. An existing-review marker and a local submission journal help prevent duplicate posting.
+
+**Result and proof:** the five-file Android test produced an [inline comment on the intended ViewModel line](https://github.com/abhinavkumar17/nowinandroid/pull/1#discussion_r4117992844); repeating publication detected the existing review. See PR coordinator tests (local, not yet published) and publisher tests (local, not yet published). Cloud concurrency and durable duplicate tracking still need work; the local demonstration does not establish production-safe distributed posting.
+
+### 8. Compare models on a larger unchanged fixture — latest checkpoint
+
+**Why:** small examples did not show enough about differences in evidence gathering, suggestion quality, cost, and token use.
+
+**What we tested:** the same fifteen-file Android diff, prompt, source snapshot, and limits were given independently to Claude Sonnet 4.6, OpenAI GPT 5.5, and Gemini 2.5 Pro through OpenRouter. The fixture includes two architecture categories, two correctness categories, and supporting changes. Expected answers were excluded from model inputs. At the user's request, the Android fixture was not built or repaired first.
+
+**Result:** all three found the four intended categories. Claude returned five findings with an overlap; OpenAI returned four and checked the analytics consequence; Gemini returned four without tool use but proposed some incorrect fixes. Total recorded cost was about $0.413 USD. All responses passed the revised validation. This is a controlled comparison, not voting, and not proof of equal quality or broad accuracy.
+
+**Proof:** [comparison tables, tokens, costs, tools, and raw findings](evidence/model-comparison/README.md), [exact prompt](evidence/model-comparison/prompt.txt), and [fixture diff](evidence/model-comparison/input.diff). Review experiments stop here pending Pratik's input.
+
+### 9. Move the verified local workflow to Fargate — next target
+
+**Why:** the eventual review should run without a developer's laptop or interactive sign-in. Fargate is the selected target for an on-demand container worker.
+
+**Already demonstrated:** manual preparation in Fargate with S3 evidence upload, as recorded in the historical milestone. That was preparation only; a directly linked cloud run artifact is not included in this documentation package.
+
+**Still pending:** packaging Pi and publication with preparation, unattended GitHub App/OpenRouter authentication, a manual end-to-end Fargate run, and then automatic event triggering. The old infrastructure alternatives remain in history; they are not competing current plans. Detailed remaining work is listed below.
+
+## Review this checkpoint
+
+1. Inspect the [model comparison and linked raw findings](evidence/model-comparison/README.md).
+2. Inspect the [assembled prompt](evidence/model-comparison/prompt.txt) and [fixture diff](evidence/model-comparison/input.diff).
+3. Check historical assembly evidence: [complete prompt](evidence/prompt-test/pr.diff.prompt.txt), [budget report](evidence/prompt-test/pr.diff.report.json), and [oversized Docker summary](evidence/live-docker-test/twenty-commits/summary.json).
+4. Inspect the [published local test comment](https://github.com/abhinavkumar17/nowinandroid/pull/1#discussion_r4117992844).
+
+Older implementation explanations and experiments are preserved in [development history](README-history.md); their status statements are historical.
+
+## Pending work and AWS sequence
+
+The three-model comparison is the current stopping point. Further model comparisons, council voting, and focused-review experiments are parked pending technical review.
+
+| Step | Work remaining |
 | --- | --- |
-| Webhook receiving | Receiving/logging demonstrated; signature verification not established by this checkpoint |
-| Automatic webhook → Fargate launch | Pending |
-| Automatic PR input acquisition and private-repository authentication | Pending |
-| Annotation and complete-prompt budget gate | Implemented and tested |
-| Local Pi integration and repository lookup | Demonstrated on controlled Android changes |
-| Response format and diff-location validation | Implemented and tested; does not validate reasoning accuracy |
-| Manual Fargate preparation and S3 upload | Demonstrated |
-| Full Pi review in Fargate and GitHub comment posting | Pending |
-
-The sections below preserve the approach and evidence in development order. Earlier proposals and diff-only packing experiments describe their original scope; the current status above takes precedence. The latest local Pi milestone follows the Docker evidence at the bottom.
-
----
-
-## Architecture Proposal, GitHub Webhook Handler
-
-Historical design proposal; the implementation status is summarized above.
-
-### Objective
-
-The goal is to build a webhook handler that detects GitHub pull request events.
-When a new pull request is created, GitHub fires a webhook event to our handler.
-This is the foundation for a later pipeline that will clone the repository, check
-out the pull request branch, and analyze the code changes.
-
-This proposal focuses only on steps one and two, receiving and detecting the pull
-request event. The heavier steps, cloning the repository and annotating the
-difference, are intentionally deferred and noted in the recommendation.
-
-### The Two Options
-
-#### Option One, Cloudflare Workers
-
-Cloudflare Workers is a lightweight serverless platform that runs small pieces of
-code instantly when triggered. It scales to zero, meaning you pay nothing when
-idle, and it offers a genuinely free tier of one hundred thousand requests per
-day. It is ideal for receiving a webhook and reacting quickly. Its limitation is a
-constrained runtime and short execution time, so it cannot clone large
-repositories in process.
-
-#### Option Two, AWS Fargate
-
-AWS Fargate runs full containers with no runtime limits, so it can clone
-repositories and perform heavy work. Used as a long-running service it costs money
-when idle, but paired with AWS Lambda as a trigger it can be run as an on-demand
-task. Lambda receives the event, spins up a Fargate task for that job, and the
-task tears itself down when finished. This means paying only for the compute
-minutes actually used.
-
-### Recommendation
-
-The recommended approach is to consolidate on a single stack, AWS. An AWS Lambda
-function receives the GitHub webhook event. When heavier work is needed, Lambda
-spins up an on-demand Fargate task that clones the repository and runs the analysis
-pipeline, then tears itself down. Keeping the webhook handler and the compute layer
-on the same platform avoids splitting across two vendors, which simplifies
-deployment, monitoring, and reasoning about the system.
-
-### How It Connects
-
-1. A pull request is opened on GitHub.
-2. GitHub fires a webhook event to our handler's URL.
-3. An AWS Lambda function receives the event and validates it.
-4. Lambda extracts the key details, such as pull request number, author, and branch.
-5. Lambda logs the event. In a later phase, it spins up an on-demand Fargate task for heavier processing.
-
-### Next Steps
-
-1. Set up an AWS Lambda function and deploy a basic handler that receives the webhook and prints it to the console.
-2. Register the webhook in the GitHub repository settings, pointing to the Lambda's URL, and subscribe to pull request events.
-3. Verify the flow by opening a test pull request and confirming Lambda receives and logs the event.
-4. In a later phase, add on-demand Fargate task handoff for cloning and diff analysis.
-
----
-
-## Stage 3 — the annotation pass (Done locally for now)
-
-### The problem
-
-A unified diff is not addressable. It carries line numbers only in its `@@` hunk
-headers — "starting at line 89, twelve lines" — while the individual lines
-beneath them are unnumbered. A model reading it can see the code perfectly well
-and still have no way to say *where* a problem lives. To cite a location it would
-have to count lines down from the header, which models do unreliably.
-
-Underneath that sits a second problem. A diff describes two versions of a file at
-once: the file before the change and the file after. A deleted line has a
-position in the old file; an added line has a position in the new one. So a bare
-line number is ambiguous — old-file 40 and new-file 40 are different places.
-GitHub's comment API reflects this directly: it will not accept a line without a
-side, `LEFT` for the old file or `RIGHT` for the new.
-
-Both problems have the same consequence. Without a per-line address that includes
-its side, a finding cannot become a comment.
-
-
-### The fix
-
-`annotate.py` addresses both problems in a single pass over the diff. It does
-three jobs.
-
-### 1. Address every line
-
-Every line the model sees carries a tag: which file it belongs to, its line
-number, and which side that number is counted against.
-
-```
-[NEW:L11] +     private let apiClient = NetworkLayer.APIClient()
-[OLD:L14] -     private var legacyCache = [String: Any]()
-[CTX:L12]       override func viewDidLoad() {
-```
-
-| Tag      | Change    | Numbered against | GitHub side         |
-| -------- | --------- | ---------------- | ------------------- |
-| `NEW:L#` | added     | the new file     | RIGHT               |
-| `OLD:L#` | deleted   | the old file     | LEFT                |
-| `CTX:L#` | unchanged | the new file     | — (not commentable) |
-
-Context lines are **kept**, not dropped, so the model can read around a change.
-They cost tokens but nothing in correctness, since they never enter the
-allow-list.
-
-Counting is delegated to the `unidiff` library rather than hand-parsed. Each
-`@@` header resets both counters, and getting that wrong by hand is the easiest
-way to produce addresses that look right and point nowhere.
-
-### 2. Sort files into tiers
-
-Not every file worth reading is worth commenting on, so read and comment are
-separate permissions. `file_tier()` sorts each path into one of two buckets:
-
-| Tier      | Files                                                                     | Treatment                      |
-| --------- | ------------------------------------------------------------------------- | ------------------------------ |
-| `comment` | production `.swift`, `.kt`, `.kts`                                        | model may read **and** comment |
-| `context` | everything else — tests, docs, lockfiles, project files, generated output  | model may read, never comment  |
-
-Tests sit in the context tier deliberately. A test reaching into an internal it
-has no business knowing about is one of the stronger drift signals available —
-dropping tests loses that signal, while letting the model comment on them
-produces noise. Read-only is the right setting.
-
-Nothing is excluded by category. A file's path is a poor predictor of whether it
-matters: code changing while its tests do not is itself a drift signal, and it is
-invisible if tests never reach the model. The only thing that removes a file is
-size, and that is handled in Stage 4.
-
-This means the annotation pass is **not** a compression step. Measured on a
-331-file Alamofire diff, it reduced the payload by 1.2% (163,426 → 161,447
-estimated tokens). Its value is addressability, not size.
-
-### 3. Build the allow-list
-
-The same pass that numbers the lines also records which of them a comment may be
-posted on — per file, **split by side**:
-
-```
-{"Source/Core/Session.swift": {"LEFT": {89, 90, ...}, "RIGHT": {89, 90, ...}}}
-```
-
-`is_in_diff(path, line, side, allowed)` is the guard. Every finding the model
-returns goes through it, and anything pointing outside the set is dropped before
-it becomes a PR comment. That covers both a model inventing a location and a
-model commenting on a file it was only allowed to read.
-
-It is built from the annotated lines themselves, **not** from hunk headers —
-and that is where the previous version was wrong. Hunk headers carry new-file
-numbering while deleted lines carry old-file numbering, so the old guard was
-comparing one against the other. On a synthetic diff it annotated 16 deleted
-lines and its own guard rejected 11 of them, while in the other direction it
-accepted 11 unchanged lines as commentable. Building the allow-list from the
-pass that numbered the lines makes that class of mismatch impossible.
-
----
-
-## Stage 4 — the context budget guard
-
-This earlier experiment budgets the diff alone and may omit file blocks. The current full-prompt review path retains all supplied changes and stops when over budget, as described in the local Pi milestone below.
-
-### The budget
-
-A context window is a per-request ceiling, not a quota. Everything sent in one
-call — prompt template, diff, and the model's own response — has to fit inside
-it. So the payload gets a share, not the whole thing:
-
-```
-1,000,000 tokens   context window
-      × 0.80       reserve 20% for the prompt template and the response
-= 800,000 tokens   payload budget
-```
-
-Tokens are estimated by character count, not by a tokenizer library:
-
-```python
-tokens = ceil(len(text) / 3.0)
-```
-
-### How packing works
-
-`pack.py` walks the annotated file blocks in order, costs each one, and adds it
-to the payload while the running total stays under budget. Every decision is
-logged: path, tier, characters, tokens, running total, and status. That log is
-the evidence artefact, written to `evidence/annotation-test/pack-run.txt`.
-
-### What a real diff looks like
-
-Run against `evidence/annotation-test/pr.diff` (Alamofire, `HEAD~5..HEAD`):
-
-```
-331 files   161,335 tokens   20.2% of budget   0 excluded
-```
-
-The guard never fired. The composition is the more interesting result:
-
-| Group                          | Files | Tokens  | Share |
-| ------------------------------ | ----- | ------- | ----- |
-| `docs/` generated HTML         | 300   | 134,131 | 83.1% |
-| duplicates `docs/docsets/`     | 151   |  70,045 | 43.4% |
-| project files (pbxproj, scheme)|  10   |  10,547 |  6.5% |
-| `Gemfile.lock`                 |   1   |   3,373 |  2.1% |
-| `Source/`                      |   7   |   2,613 |  1.6% |
-| **`comment` tier (total)**     | **8** | **4,014** | **2.5%** |
-
-So 97.5% of what the model reads, it cannot comment on.
-
----
-
-### Evidence: budget enforcement
-
-Three runs against Alamofire, same code, bigger diff each time.
-
-| run | files in | tokens | % of budget | files excluded |
-|---|---|---|---|---|
-| `HEAD~5` | 331 | 161,335 | 20.2% | 0 |
-| `HEAD~10` | 362 | 289,022 | 36.1% | 0 |
-| `HEAD~20` | 335 | 799,214 | 99.9% | 48 |
-
-The first two fit with room to spare. `HEAD~20` is the first diff big enough to
-run out of budget — 1,341,153 raw tokens against a ceiling of 800,000 — so the
-guard had no choice but to drop files.
-
-The log separates two cases. One file was costed and didn't fit
-(`exceeds remaining budget`). The other 47 were never costed at all, because the
-budget was already gone by the time they came up
-(`budget exhausted before reached`).
-
-### Annotation overhead
-
-Annotation adds line addresses (`[CTX:L11]`, `[NEW:L14]`) to every line, which
-costs tokens rather than saving them:
-
-| run | raw tokens | annotated tokens | overhead |
-|---|---|---|---|
-| `HEAD~5` | 163,426 | 161,447 | −1.2% |
-| `HEAD~10` | 272,948 | 289,141 | +5.9% |
-| `HEAD~20` | 1,341,153 | 1,445,811 | +7.8% |
-
-This is the price of addressable findings and is stable across runs. Note that
-`pack.py` reports a single `reduction:` figure that nets this overhead against
-excluded files; the two effects are separated above.
-
-### Reproduce
-
-The commands below describe the earlier annotation and packing runs. Moving upstream references may produce different inputs; use the saved diffs in `evidence/annotation-test/` for comparisons. Complete-prompt evidence is described below.
-
-```
-pip install unidiff pytest
-
-git diff HEAD~5 HEAD > pr.diff
-python annotate.py pr.diff > annotation-run.txt
-python pack.py pr.diff > pack-run.txt
-python -m pytest tests/test_annotate.py -v > test-run.txt
-```
-
-## Tests
-
-Run all local unit tests from the repository root with `python -m pytest tests -v`. Tests live in `tests/` and cover annotation, diff packing, and complete-prompt assembly/budgeting. No AWS or model calls are needed.
-
-
-`tests/test_annotate.py` runs on diff strings alone — no AWS, no GitHub, no model. So
-Stage 3's correctness can be verified today, while the stages around it are
-still unbuilt.
-
-## Test evidence and results
-
-The evidence folders record two stages of local testing against saved Alamofire diffs. No model calls or architectural review findings are represented here.
-
-### evidence/annotation-test: annotation and diff-only packing
-
-- `pr.diff` and `pr-20.diff`: saved small and large input diffs, historically described as HEAD~5 and HEAD~20. Reuse these files for comparisons; upstream HEAD changes over time.
-- `annotation-run.txt` and `annotation-run-20.txt`: earlier line-annotation outputs.
-- `pack-run.txt` and `pack-run-20.txt`: earlier diff-only packing results. The small run included 161,335 estimated tokens. The large run kept 799,214 estimated tokens and excluded 48 files.
-- `test-run.txt`: historical annotation-test output, not the current full test suite.
-
-Despite the folder name, this stage includes both annotation and packing. The HEAD~10 results mentioned above do not have corresponding saved artifacts here.
-
-### evidence/prompt-test: complete-prompt budget checks
-
-Each saved diff has two outputs:
-
-- `.prompt.txt`: review template plus version-two guidelines plus all blocks emitted by annotation.
-- `.report.json`: estimated tokens, input budget, expected outcome, pass/fail comparison, and SHA-256 fingerprints of the input files.
-
-| Input | Estimated tokens | Input budget | Fits | Expected-result check |
-| --- | ---: | ---: | --- | --- |
-| pr.diff | 164,870 | 800,000 | Yes | Passed |
-| pr-20.diff | 1,449,353 | 800,000 | No | Passed |
-
-The large case passing its test means overflow was correctly detected; it does not mean the prompt is acceptable for model submission.
-
-### Why the results differ
-
-The earlier packing run trims annotated file blocks to fit. The new check measures the complete assembled prompt without budget trimming. The large increase is mainly because all annotated blocks are retained, not because the guidelines alone added that many tokens.
-
-Both stages use the character-based estimate ceil(characters / 3). This is not an exact provider token count. The 800,000 input budget is a configured assumption leaving 200,000 tokens outside the input under the project's assumed one-million-token context window; an actual model's limits still need verification.
-
-### How the prompt evidence was produced
-
-The user built the local Docker image and ran a Python verification script inside it, overriding the usual entrypoint. The repository was mounted read-only at /app and an output folder at /work. The script read REVIEW_TEMPLATE.md, GUIDELINES_V2.md, and each saved diff, called core.prompt.prepare_prompt with an 800,000-token budget, and wrote the prompt and report. At the time of this historical run, the normal container entrypoint and a saved reproduction command were not yet implemented. The automated workflow is now described in Automated local preparation below.
-
-At the time of that run the diffs lived directly under evidence/. They now live under evidence/annotation-test/; any rerun must use the new paths. File contents are unchanged. The original generated outputs remain in out/prompt-budget/; evidence/prompt-test/ contains verified identical copies for review. These files are historical snapshots and do not automatically update when code or guidelines change.
-
-## Automated local preparation
-
-The runner now checks the application tests before preparing input. Each run creates a unique folder under the output directory and shows progress in the terminal. On failure, later steps are skipped. Passing tests does not mean the input has no architectural violations; no model is called yet.
-
-Install dependencies with `python -m pip install unidiff pytest`, then run from the repository root:
-
-```powershell
-python entrypoint.py --commits 20
-```
-
-This clones Alamofire and compares the selected head with its twentieth first-parent ancestor. Change `--commits` to 5 or 50 without editing code. Use `--repo` to choose a repository, `--head` to choose a head revision, and optionally `--base` for an explicit base. REPO_URL, HEAD_REF and BASE remain supported; an explicit base takes precedence over the commit count. The resolved commit IDs are saved.
-
-To repeat an existing input without fetching GitHub:
-
-```powershell
-python entrypoint.py --diff evidence/annotation-test/pr.diff
-```
-
-For Docker, start Docker Desktop and build the image, then run:
-
-```powershell
-docker build -t arch-drift .
-New-Item -ItemType Directory -Force .\out\runs | Out-Null
-docker run --rm --mount "type=bind,source=$($PWD.Path)\out\runs,target=/work" arch-drift --commits 20
-```
-
-To use a saved diff in Docker:
-
-```powershell
-docker run --rm --mount "type=bind,source=$($PWD.Path)\evidence\annotation-test,target=/inputs,readonly" --mount "type=bind,source=$($PWD.Path)\out\runs,target=/work" arch-drift --diff /inputs/pr.diff
-```
-
-Repeat with `/inputs/pr-20.diff` for the historical large input. Exit code 0 means the estimated prompt fits; 2 means over budget (expected for the large fixture); 1 means a processing/test failure. Invalid command arguments are rejected before a run begins. Full prompts are saved even when over budget; no budget trimming occurs.
-
-Every run folder contains `run.log` and `summary.json`. Successful test execution also saves `tests.log` and `tests.xml`. Later steps save `pr.diff`, `annotation.log`, `prompt.txt`, and `budget-report.json`. Clone mode additionally saves the repository and Git logs. A failure can leave only the artifacts from steps reached so far. These generated folders are local output; selected evidence can be archived after review.
-
-Local runner validation on September 23, 2026: all 27 tests passed. Saved small input: 164,857 estimated tokens (fits). Saved large input: 1,449,340 (over budget). Both used an 800,000 input budget and current guidelines; earlier evidence remains unchanged. Full local logs are under `out/runner-validation/`. Docker validation subsequently passed on the same date: the image built successfully, both runs passed all 27 tests, and the small/large inputs returned exit codes 0/2 with the same estimates as the direct local runs. Evidence is saved under `out/docker-validation/`, one folder per run.
-
-### Live Alamofire Docker validation
-
-On September 23, 2026 (Toronto time; September 24 UTC), the normal Docker runner fetched Alamofire and generated the diff dynamically for each selected commit range. Both runs passed all 27 application tests, created the diff, annotated it, and checked the complete prompt.
-
-| Commit range | Estimated tokens | Input budget | Result | Evidence |
-| --- | ---: | ---: | --- | --- |
-| Latest 5 commits | 164,857 | 800,000 | Ready | [Five-commit summary](evidence/live-docker-test/five-commits/summary.json) |
-| Latest 20 commits | 1,449,340 | 800,000 | Stopped: over budget | [Twenty-commit summary](evidence/live-docker-test/twenty-commits/summary.json) |
-
-Each folder under `evidence/live-docker-test/` contains the unchanged `summary.json`, `budget-report.json`, `tests.log`, and `run.log` from its run. The summary records the exact repository and base/head commits; the budget report records input fingerprints. The progress logs refer to the original container output paths. Full generated prompts, diffs, and cloned repositories remain local under `out/runs/`.
-
-The oversized result confirms the budget guard stopped processing as intended, not that application tests failed. No files were trimmed to fit and no model was called. These are character-based estimates, not provider token counts. Future runs against moving HEAD may differ; use the recorded base/head revisions to select the same code range. This validates the live-repository preparation path locally in Docker; it does not verify Fargate deployment or model review.
-
----
-
-## Local review milestone — September 27, 2026
-
-One local command now prepares a saved diff in Docker, runs a model review through Pi on the laptop, validates the response, and saves evidence. Optional repository lookup lets the model inspect related code. PR fetching, automatic triggering, and comment posting are not part of this completed milestone.
-
-### 1. Prepare one complete prompt
-
-The prompt combines five sections: role, architecture guidelines, annotated diff, review policy, and JSON response format. The review template adapts [TAKT's faceted prompting structure](https://github.com/nrslib/takt/blob/main/docs/faceted-prompting.md) to architecture review. Guidelines define the principles; policy requires supported findings; structured output lets the application check their locations.
-
-The full version-two guidelines and annotated changes are inserted into the template. No files are trimmed to fit. This layout and the findings schema are application choices, not mandatory Pi formats.
-
-### 2. Check the budget before review
-
-Preparation estimates the assembled prompt as character count divided by three, rounded up, then compares it with the configured input allowance. Over-budget preparation saves evidence and stops before Pi. The five-file experiment used **5,667 estimated tokens against a 16,000-token allowance**. These are estimates, not exact model token counts or monetary limits.
-
-### 3. Use Pi for the review conversation
-
-Pi was chosen to manage the model-and-tool conversation rather than implementing that loop ourselves. Docker runs preparation; the local coordinator then starts Pi using the installed CLI for diff-only review or our SDK adapter for repository lookup. Pi is not yet packaged inside Docker.
-
-Repository mode creates a fresh in-memory session with three custom read-only tools: find files, search text, and read lines. Our application captures a tracked-source snapshot, restricts tool access, checks estimated context before each model request, and records tool activity and provider-reported usage. These restrictions are application-level controls, not an operating-system sandbox.
-
-Pi accepts prompt text; our adapter reads the saved prompt and supplies it through the SDK. Additional instructions, tool definitions, and later tool results also contribute to model context. See [Pi SDK documentation](https://pi.dev/docs/latest/sdk). The tested Pi installation was version 0.87.1.
-
-### 4. Evidence from two Android experiments
-
-Testing used our [Now in Android fork](https://github.com/abhinavkumar17/nowinandroid). These controlled cases exercise our three guidelines; they do not establish general review accuracy or support for other platforms.
-
-**Test 1 — minimal state-ownership violation.** Two bookmarks files were changed so the screen directly mutated ViewModel-owned undo state. The model returned a finding. The reverse/fix diff returned no findings in the manual Docker-to-Pi run. The one-command coordinator subsequently reproduced the violation finding; the automated fix run remains unverified.
-
-**Test 2 — five-file change with repository lookup.** A Reset appearance action changed the settings dialog, label, ViewModel, dependency configuration, and Kotlin test. The deliberate violation made the ViewModel call the preferences data source directly, bypassing its repository interface. Both the diff-only baseline and the lookup-enabled run returned one finding.
-
-The lookup-enabled run performed **three searches and three reads**, inspecting the repository interface, repository implementation, and datastore implementation. This proves runtime lookup occurred; it does not prove improved accuracy over the baseline.
-
-| Model request | Context added | Estimated context | Reported uncached input | Reported cached input | Reported output |
-| --- | --- | ---: | ---: | ---: | ---: |
-| 1 | Prepared prompt, system instructions, tool definitions | 6,403 | 4,006 | 0 | 118 |
-| 2 | Three search results and retained history | 8,191 | 968 | 3,584 | 157 |
-| 3 | Three file reads and retained history | 13,052 | 3,991 | 3,584 | 600 |
-| Total across calls | Includes repeated context | — | 8,965 | 7,168 | 875 |
-
-Each request passed the **32,000 estimated input allowance**, with **4,096 tokens reserved for output**. Reported usage totaled **17,008 tokens across calls**, including repeated and cached context; this is not a dollar charge. No compaction occurred. Pi compaction is enabled, but our smaller custom guard can stop a request before model-window-based compaction activates.
-
-Evidence was recorded locally under `out/local-reviews/20260927T005754Z-51zsx84_`: findings, original response, tool events, preparation output, and summary. Generated run folders are intentionally excluded from Git.
-
-Response validation checks JSON structure and changed-line locations, not reasoning accuracy. The Android app and added Kotlin test were not built or run. The review application's Python and Node tests cover preparation failures, budget gates, response validation, repository restrictions, and tool limits.
-
-### Running the local checkpoint
-
-Requirements: Python with `unidiff` installed, Docker Desktop, Node.js, and a signed-in Pi installation. Build the preparation image and supply a saved diff:
-
-```powershell
-docker build -t arch-drift .
-python review_local.py --diff path/to/change.diff
-python review_local.py --diff path/to/change.diff --repo path/to/checkout
-```
-
-Repository mode requires the diff to match the checkout's tracked changes against HEAD. To run implementation checks without calling the model:
-
-```powershell
-python -m pytest tests host_tests -q
-node --test host_tests/test_repo_tools.mjs
-```
-
-Install `pytest` alongside `unidiff` for these local Python tests. S3 upload uses `boto3`, which is included in the Docker image.
-
-### Next stage
-
-Test a valid change whose interpretation depends on related code, comparing lookup disabled and enabled. Continue evaluating missing context, budget limits, and larger changes before moving the complete model review to Fargate.
-
-A manual five-commit Fargate **preparation** run and S3 upload were verified earlier. Full Pi review in AWS, automatic PR triggering, private-repository credentials, and posting comments remain pending.
+| Save the checkpoint | Documentation and selected evidence are published in this checkpoint. Review and publish the remaining local implementation changes separately; request Pratik's feedback. |
+| Full container | Package preparation, Pi, repository lookup, validation, evidence saving, and posting in one reproducible image; verify locally. |
+| Unattended authentication | Configure OpenRouter credentials and a GitHub App identity through runtime secrets; replace personal interactive sign-in. |
+| Manual Fargate run | Fetch exact PR revisions, run a review, save durable evidence and logs, and verify posting with revision and duplicate checks. |
+| Automatic triggering | Verify webhook signatures and event eligibility; connect job launch with retry, timeout, duplicate-delivery, and concurrency handling. |
+| Operations | Establish least-privilege access, durable publication tracking, monitoring, cost controls, and failure recovery. |
+
+Serverless workers can be disposable, but the system still needs durable evidence and job/publication state outside the container. Existing local duplicate controls must be reviewed for concurrent cloud jobs.
+
+Questions for Pratik: should the next review strategy use focused passes rather than council voting; what criteria should merge, score, and select findings; and which model mix should be used? AWS packaging can progress independently of those review-strategy choices.

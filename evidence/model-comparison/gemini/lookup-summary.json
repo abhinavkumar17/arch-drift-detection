@@ -1,0 +1,12 @@
+{
+  "tool_calls": 0,
+  "retrieved_chars": 0,
+  "usage": {
+    "input": 11015,
+    "output": 2910,
+    "cacheRead": 0,
+    "cacheWrite": 0,
+    "total": 13925
+  },
+  "accounting": "Provider-reported usage where available; request size checks are estimates. Cost is not calculated."
+}

@@ -1,0 +1,45 @@
+{
+  "findings": [
+    {
+      "path": "feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsDialog.kt",
+      "line": 142,
+      "side": "RIGHT",
+      "principle": "Responsiveness",
+      "title": "UI thread is blocked for five seconds",
+      "explanation": "Calling `Thread.sleep()` on the main thread makes the application unresponsive. In this case, clicking the \"Reset appearance\" button will freeze the UI for five seconds. Long-running operations should be performed on a background thread.",
+      "evidence": "feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsDialog.kt:142\n+                         Thread.sleep(5_000)",
+      "suggested_change": "If a delay is required, use a coroutine with `delay()` instead of `Thread.sleep()` to avoid blocking the main thread. The `onClick` handler can be a suspend function or launch a new coroutine if needed.\n\n```kotlin\nNiaTextButton(onClick = {\n    // Assuming the calling scope is a coroutine scope from the composition\n    scope.launch {\n        delay(5_000)\n        onResetAppearance()\n    }\n}) { ... }\n```"
+    },
+    {
+      "path": "feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsViewModel.kt",
+      "line": 39,
+      "side": "RIGHT",
+      "principle": "Keep screen logic separate from data access",
+      "title": "ViewModel depends directly on a data source",
+      "explanation": "The `SettingsViewModel` now depends on `NiaPreferencesDataSource`, which is a data-access component, not a repository. The `resetAppearance` function in the ViewModel directly calls methods on this data source to change stored data. This violates the architecture guideline that ViewModels should depend on repositories to separate screen logic from data access details. This work should be encapsulated within the `UserDataRepository`.",
+      "evidence": "feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsViewModel.kt:39\n+     private val preferences: NiaPreferencesDataSource,\n\nfeature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsViewModel.kt:58-63\n+     fun resetAppearance() {\n+         viewModelScope.launch {\n+             preferences.setThemeBrand(ThemeBrand.DEFAULT)\n+             preferences.setDarkThemeConfig(DarkThemeConfig.FOLLOW_SYSTEM)\n+             preferences.setDynamicColorPreference(false)\n+         }\n+     }",
+      "suggested_change": "Remove the `NiaPreferencesDataSource` dependency from the ViewModel. Add a `resetAppearance` method to the `UserDataRepository` interface and implement it in `OfflineFirstUserDataRepository` to perform the data modifications. The ViewModel should then call this new repository method."
+    },
+    {
+      "path": "feature/bookmarks/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksScreen.kt",
+      "line": 98,
+      "side": "RIGHT",
+      "principle": "Give shared state a clear owner",
+      "title": "UI component directly modifies ViewModel state",
+      "explanation": "The `BookmarksScreen` now directly sets `viewModel.shouldDisplayUndoBookmark` and `viewModel.lastRemovedBookmarkId`. This bypasses the ViewModel's role as the sole owner of its state, spreading state management logic into the UI. This violates the principle that the UI should only report user actions to the ViewModel, which then handles state updates. The previous implementation, which called a `clearUndoState` method on the ViewModel, correctly followed this pattern.",
+      "evidence": "feature/bookmarks/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksScreen.kt:97-100\n+         clearUndoState = {\n+             viewModel.shouldDisplayUndoBookmark = false\n+             viewModel.lastRemovedBookmarkId = null\n+         },",
+      "suggested_change": "Restore the `clearUndoState` function in `BookmarksViewModel` and make the state properties it modifies (`shouldDisplayUndoBookmark`, `lastRemovedBookmarkId`) private again. The UI should call this function via a method reference, e.g., `clearUndoState = viewModel::clearUndoState`."
+    },
+    {
+      "path": "core/data/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/OfflineFirstUserDataRepository.kt",
+      "line": 55,
+      "side": "RIGHT",
+      "principle": "Correctness",
+      "title": "Incorrect implementation of `markNewsResourcesRead`",
+      "explanation": "The function `markNewsResourcesRead` is implemented to mark news resources as *unread* by calling `setNewsResourceViewed(id, false)`. Based on the function name and the test implementations in `FakeUserDataRepository` and `TestUserDataRepository`, it should mark them as *read* by passing `true`.",
+      "evidence": "core/data/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/OfflineFirstUserDataRepository.kt:55\n+             niaPreferencesDataSource.setNewsResourceViewed(id, false)",
+      "suggested_change": "Change the boolean literal from `false` to `true` to correctly mark the news resources as viewed.\n\n```kotlin\n    override suspend fun markNewsResourcesRead(newsResourceIds: Set<String>) {\n        // The change is here\n        niaPreferencesDataSource.updateNewsResourceViewed(newsResourceIds, true)\n    }\n```\nIt also seems that iterating and calling the data source for each ID is inefficient. If possible, consider a batch update operation."
+    }
+  ],
+  "limitations": []
+}

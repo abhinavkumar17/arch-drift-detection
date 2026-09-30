@@ -1,0 +1,10 @@
+{
+  "estimated_tokens": 11471,
+  "input_budget": 16000,
+  "fits": true,
+  "diff_sha256": "8adb3c9bf6baa832e1b6ffff8fbfdda4a2e2db8de8fd3a8e2f926f42f4f5879f",
+  "prompt_sha256": "7f435e7cdaf4cd094c6ccedf2e7ee91e304cc6bb1994d54bbb3fa5246643e092",
+  "files": 462,
+  "android_build_run": false,
+  "preparation": "Existing prompt builder invoked locally; Docker not used for this experiment."
+}

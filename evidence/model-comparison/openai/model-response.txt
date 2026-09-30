@@ -1,0 +1,45 @@
+{
+  "findings": [
+    {
+      "path": "feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsDialog.kt",
+      "line": 142,
+      "side": "RIGHT",
+      "principle": "General review principle: avoid blocking the UI thread",
+      "title": "Reset click handler blocks the UI thread",
+      "explanation": "The reset button's onClick handler calls Thread.sleep(5_000). Compose click handlers run on the main thread, so every tap freezes rendering and input for five seconds and can hit Android's ANR threshold before the reset action runs.",
+      "evidence": "The added handler sleeps synchronously before calling onResetAppearance().",
+      "suggested_change": "Remove the blocking sleep. If a delay or long-running operation is needed, model it as state and use a coroutine with delay or perform work off the main thread."
+    },
+    {
+      "path": "core/data/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/OfflineFirstUserDataRepository.kt",
+      "line": 55,
+      "side": "RIGHT",
+      "principle": "General review principle: implementation must match the repository contract",
+      "title": "Mark-read implementation clears read state",
+      "explanation": "markNewsResourcesRead is supposed to mark the supplied resources as read, but it passes false to setNewsResourceViewed. In the datastore implementation, false removes the id from viewedNewsResourceIds, so the new \"Mark all saved articles read\" action will actually mark saved articles unread in production.",
+      "evidence": "UserDataRepository documents markNewsResourcesRead as marking supplied articles as read, while NiaPreferencesDataSource.setNewsResourceViewed(..., false) removes the id from the viewed set.",
+      "suggested_change": "Pass true when marking each resource viewed, preferably using the datastore bulk API with setNewsResourcesViewed(ids, true) to update all ids consistently."
+    },
+    {
+      "path": "feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsViewModel.kt",
+      "line": 60,
+      "side": "RIGHT",
+      "principle": "Depend on what a component provides, not how it is built",
+      "title": "Settings ViewModel bypasses the repository to write preferences",
+      "explanation": "resetAppearance writes directly to NiaPreferencesDataSource from the ViewModel even though the ViewModel already depends on UserDataRepository for settings changes. This ties screen logic to the datastore implementation and bypasses repository behavior such as analytics logging in OfflineFirstUserDataRepository.",
+      "evidence": "The new resetAppearance method calls preferences.setThemeBrand/setDarkThemeConfig/setDynamicColorPreference directly; UserDataRepository already exposes corresponding setters used by the other ViewModel update methods.",
+      "suggested_change": "Remove the datastore dependency from the feature ViewModel and route the reset through UserDataRepository, either by calling the existing repository setters or by adding a repository-level resetAppearance operation."
+    },
+    {
+      "path": "feature/bookmarks/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksViewModel.kt",
+      "line": 45,
+      "side": "RIGHT",
+      "principle": "Give shared state a clear owner",
+      "title": "Undo bookmark state is made externally writable",
+      "explanation": "lastRemovedBookmarkId was private but is now a public mutable property, and the screen now clears ViewModel fields directly instead of invoking the ViewModel's clearUndoState action. That spreads ownership of undo state across UI and ViewModel code and lets callers bypass the ViewModel's update logic.",
+      "evidence": "BookmarksScreen's new clearUndoState lambda writes viewModel.shouldDisplayUndoBookmark and viewModel.lastRemovedBookmarkId directly.",
+      "suggested_change": "Keep lastRemovedBookmarkId private and pass viewModel::clearUndoState to the UI, or expose only read-only state plus ViewModel actions for mutations."
+    }
+  ],
+  "limitations": []
+}

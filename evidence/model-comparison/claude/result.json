@@ -1,0 +1,11 @@
+{
+  "provider": "openrouter",
+  "model": "anthropic/claude-sonnet-4.6",
+  "exit_code": 0,
+  "elapsed_seconds": 86.8,
+  "raw_json_only": true,
+  "status": "review_completed",
+  "findings": 5,
+  "usage_events": 3,
+  "reported_cost_usd": 0.13466265000000002
+}
