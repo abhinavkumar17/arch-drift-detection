@@ -136,17 +136,5 @@ Older implementation explanations and experiments are preserved in [development 
 
 ## Pending work and AWS sequence
 
-The three-model comparison is the current stopping point. Further model comparisons, council voting, and focused-review experiments are parked pending technical review.
 
-| Step | Work remaining |
-| --- | --- |
-| Save the checkpoint | Documentation and selected evidence are published in this checkpoint. Review and publish the remaining local implementation changes separately; request Pratik's feedback. |
-| Full container | Package preparation, Pi, repository lookup, validation, evidence saving, and posting in one reproducible image; verify locally. |
-| Unattended authentication | Configure OpenRouter credentials and a GitHub App identity through runtime secrets; replace personal interactive sign-in. |
-| Manual Fargate run | Fetch exact PR revisions, run a review, save durable evidence and logs, and verify posting with revision and duplicate checks. |
-| Automatic triggering | Verify webhook signatures and event eligibility; connect job launch with retry, timeout, duplicate-delivery, and concurrency handling. |
-| Operations | Establish least-privilege access, durable publication tracking, monitoring, cost controls, and failure recovery. |
 
-Serverless workers can be disposable, but the system still needs durable evidence and job/publication state outside the container. Existing local duplicate controls must be reviewed for concurrent cloud jobs.
-
-Questions for Pratik: should the next review strategy use focused passes rather than council voting; what criteria should merge, score, and select findings; and which model mix should be used? AWS packaging can progress independently of those review-strategy choices.
