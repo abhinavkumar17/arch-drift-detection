@@ -130,15 +130,17 @@ That lookup run used three model requests and reported 17,008 tokens in total, i
 - Test cases where reading supporting code changes the review outcome, to understand when lookup improves results enough to justify its extra usage.
 - Package Pi review and PR posting in Docker; both still run on the laptop.
 
-### 6. Broaden review scope and make response handling reliable
+### 6. Define the review response and test it across models
 
-**Why:** architecture guidelines should guide attention without suppressing genuine correctness defects. Separately, useful findings should not be lost merely because a model wraps JSON in Markdown.
+**Why:** we need each model to return its review in the same structure so our code can read the findings and prepare PR comments.
 
-**What we tested:** the original architecture-focused instructions missed a synthetic blocking-code problem; broader instructions detected it. We aligned the template and Pi adapter, then checked architecture violation, blocking defect, and valid-change cases. Models detected the intended defects, but several responses failed the old raw-JSON-only parser.
+**What we defined:** we included the expected response format in the review prompt. Each finding should identify the file and line, describe the issue, show the supporting evidence, and suggest a change. The response also has space for limitations, such as missing information. This is the structure we chose for our project.
 
-**Change and result:** the parser now accepts a single unambiguous JSON object surrounded by prose or Markdown, while rejecting malformed or ambiguous responses and still validating fields and locations. The template requests JSON only. The previous offline verification reported 87 passing Python tests and successful parsing/location checks for all nine saved responses; no new model calls were needed for that fix. This documentation edit does not rerun those tests.
+**What we tested and found:** using Pi and OpenRouter, we gave Claude Sonnet 4.6, OpenAI GPT 5.5, and Gemini 2.5 Pro the same fifteen-file change and requested the same response structure. Our code successfully read all three responses and checked their required fields and comment locations. Gemini added Markdown around its JSON, which our response handling accepted. Passing these checks means the response can be processed; it does not mean every finding or suggested fix is correct. We saved these results for comparison and did not post them to the PR.
 
-**Proof and limit:** format tests (local, not yet published), publisher tests (local, not yet published), and [new comparison responses and validation results](evidence/model-comparison/README.md). The earlier three-case response sets remain local. Parser acceptance is distinct from whether a suggested fix is correct.
+**Evidence:** [prompt with the response format](evidence/model-comparison/prompt.txt), saved findings from [Claude](evidence/model-comparison/claude/findings.json), [OpenAI](evidence/model-comparison/openai/findings.json), and [Gemini](evidence/model-comparison/gemini/findings.json), and the [comparison report with original responses and validation results](evidence/model-comparison/README.md).
+
+**Open question:** does this response structure contain what we need to assess findings and prepare useful PR comments, or should it be adjusted before we add scoring and deduplication?
 
 ### 7. Complete the local PR-to-comment loop
 
