@@ -6,9 +6,22 @@ Build a self-hosted PR reviewer that prioritizes project architecture guidelines
 
 ## Current results
 
-- **Local PR-to-comment loop demonstrated:** a saved review was posted to the intended Android PR line; repeating publication detected the existing review. [Posted test comment](https://github.com/abhinavkumar17/nowinandroid/pull/1#discussion_r4117992844).
-- **Three-model comparison complete:** Claude Sonnet 4.6, OpenAI GPT 5.5, and Gemini 2.5 Pro found all four seeded issue categories in the same fifteen-file fixture. Fix quality, duplication, tool use, and cost differed. Total recorded model cost was about **$0.413 USD**. [Findings, cost, tokens, tools, and original responses](evidence/model-comparison/README.md).
-- **Prompt assembly and budget gates demonstrated:** complete prompts are checked before review, with additional estimated checks during repository-aware review. Oversized preparation stops before calling a model. [Prompt evidence](evidence/prompt-test/pr.diff.report.json) and [Docker overflow proof](evidence/live-docker-test/twenty-commits/summary.json).
+- **Local PR review:** we reviewed an Android test PR and posted the finding on the correct code line. [Posted test comment](https://github.com/abhinavkumar17/nowinandroid/pull/1#discussion_r4117992844).
+- **Review testing progressed from small changes to a larger comparison.** We started with a two-file Android change to check whether the reviewer could identify a deliberate architecture violation. We then tested a five-file settings change with repository lookup, before moving to a fifteen-file change containing several deliberate issues. Each stage answered a different question:
+
+  | Test | Why we ran it | What we learned |
+  | --- | --- | --- |
+  | Two-file architecture change | Check whether the reviewer identifies the screen directly changing ViewModel-owned state. | It reported the violation. A manual reverse/fix test returned no findings. |
+  | Five-file settings change | Check whether the reviewer detects direct datastore access and can inspect related repository code. | Both the diff-only and lookup-enabled reviews found the repository bypass. The lookup run searched and read supporting files; this demonstrated tool use, not an accuracy improvement over the diff-only run. |
+  | Blocking-code and valid-change cases | Check whether the reviewer can report a real bug outside the written architecture rules and leave a valid change unflagged. | Broader review instructions allowed the blocking bug to be reported. Valid-change responses returned no findings, but some responses failed the original strict JSON parser. That led to the separate response-format fix described below. |
+  | Fifteen-file Android change | Compare models on the same larger input, with architecture violations, correctness bugs, and supporting changes. | Claude Sonnet 4.6, OpenAI GPT 5.5, and Gemini 2.5 Pro each found the four intended issue categories. Their suggested fixes, overlapping findings, repository tool use, token usage, and costs differed. |
+
+  The fifteen-file comparison ran through OpenRouter using the same prompt, source snapshot, and review limits. Expected answers were kept out of the model inputs. The Android changes were not compiled or executed before review. The earlier stages were separate experiments; this table does not imply that every earlier case was run with all three models under identical conditions.
+
+  The **approximately $0.413 USD** recorded cost covers only the three reviews of the fifteen-file change, not all testing to date. See the [comparison report and original responses](evidence/model-comparison/README.md) for findings, costs, tokens, and tool activity. The milestone sections below explain each stage and link its available evidence.
+- **Prompt assembly and token-limit checks:** before calling the model, we combine the review instructions, architecture guidelines, annotated code changes, and expected response format into one complete prompt. We estimate its token count and compare it with the configured input limit. If the prompt is too large, we save the preparation result and stop without calling the model. We tested both an input that fits and an oversized input that is correctly stopped. See the [assembled prompt](evidence/prompt-test/pr.diff.prompt.txt), [token estimate report](evidence/prompt-test/pr.diff.report.json), and [oversized Docker test](evidence/live-docker-test/twenty-commits/summary.json).
+
+  During a repository-aware review, the model can ask to search or read supporting files. The returned excerpts become part of the next request, along with the existing review context. We therefore check the estimated input size again before each model call and stop if it exceeds the limit. These are token-size limits, not spending limits; token counts are currently estimated from character counts rather than measured with the model's tokenizer.
 - No AWS/Fargate setup
 
 ## Local flow
@@ -107,7 +120,7 @@ flowchart TD
 
 **What we did:** the PR coordinator records exact revisions. The publisher creates a preview, checks current revisions, submits against the reviewed commit, and records publication. An existing-review marker and a local submission journal help prevent duplicate posting.
 
-**Result and proof:** the five-file Android test produced an [inline comment on the intended ViewModel line](https://github.com/abhinavkumar17/nowinandroid/pull/1#discussion_r4117992844); repeating publication detected the existing review. See PR coordinator tests (local, not yet published) and publisher tests (local, not yet published). Cloud concurrency and durable duplicate tracking still need work; the local demonstration does not establish production-safe distributed posting.
+**Result and proof:** the five-file Android test produced an [inline comment on the intended ViewModel line](https://github.com/abhinavkumar17/nowinandroid/pull/1#discussion_r4117992844). Repeat-posting verification is pending. See PR coordinator tests (local, not yet published) and publisher tests (local, not yet published). Cloud concurrency and durable duplicate tracking still need work; the local demonstration does not establish production-safe distributed posting.
 
 ### 8. Compare models on a larger unchanged fixture — latest checkpoint
 
@@ -136,5 +149,4 @@ Older implementation explanations and experiments are preserved in [development 
 
 ## Pending work and AWS sequence
 
-
-
+- [ ] Verify repeat posting: repeat the posting step using the same saved review and confirm that no duplicate PR comment is created. Save the result as evidence.
