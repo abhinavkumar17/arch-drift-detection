@@ -36,13 +36,9 @@ flowchart TD
     COMMENT --> GH["GitHub inline PR comment"]
 ```
 
-Saved-diff reviews can stop at local evidence. Posting requires a PR-linked run and an explicit publication step. Validation checks format and location, not reasoning accuracy. Both review entry points require OpenRouter, with Claude Sonnet 4.6 as the default; they do not fall back to Codex sign-in. The fifteen-file comparison used local prompt preparation instead of Docker.
-
 ## Development milestones: why, tests, and evidence
 
 ### 1. Acquire a reproducible diff
-
-**Why:** a review needs an identifiable code change. Moving branch names alone are insufficient for reproducing a result or posting to the right revision.
 
 **What we did:** first used saved Alamofire diffs, then verified live repository fetching in Docker. The later local PR coordinator fetches fixed base/head commits into a separate checkout, derives the diff from their merge base, and records the revisions. It checks for revision changes before treating a review as current.
 
