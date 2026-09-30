@@ -75,22 +75,26 @@ flowchart TD
 
 **Evidence:** [annotation test results](evidence/annotation-test/test-run.txt), [saved annotation output](evidence/annotation-test/annotation-run.txt), and [larger-diff annotation output](evidence/annotation-test/annotation-run-20.txt). The test log records the annotation tests from that stage, not the current full test suite.
 
-### 3. Explore diff budgets, then check the complete prompt
+### 3. Check the prompt size before sending it
 
-**Why:** counting only the diff misses instructions, guidelines, and output requirements. We needed evidence that the final assembled input is checked before a model is called.
+**Why:** the code changes, review instructions, and architecture guidelines must fit within the input size we allow for a model request. We check them together before sending the prompt.
 
-**First experiment — diff-only packing:** the packer kept file blocks until an 800,000-token estimated allowance was reached. The small saved run kept 161,335 estimated tokens; the large run kept 799,214 and excluded 48 files. This demonstrated size enforcement, but could omit review context. [Small packing log](evidence/annotation-test/pack-run.txt), [large packing log](evidence/annotation-test/pack-run-20.txt).
+**Result:** we tested a smaller prompt and a larger one. The smaller prompt passed. The larger prompt exceeded the configured limit, so preparation stopped without calling the model or removing any files.
 
-**Current approach — assemble first, then gate:** insert guidelines and all annotated diff blocks into the template, estimate the complete prompt, and stop if it exceeds the configured allowance. The complete-prompt path does not trim files to make the input fit.
-
-| Historical complete-prompt test | Estimated input tokens | Allowance | Result |
+| Saved preparation test | Estimated input tokens | Configured test limit | Result |
 | --- | ---: | ---: | --- |
-| Small saved diff | 164,870 | 800,000 | Fits |
-| Large saved diff | 1,449,353 | 800,000 | Correctly rejected as oversized |
+| Smaller prompt | 164,870 | 800,000 | Passed the size check |
+| Larger prompt | 1,449,353 | 800,000 | Stopped before calling the model |
 
-**Proof:** [small assembled prompt](evidence/prompt-test/pr.diff.prompt.txt), [small report](evidence/prompt-test/pr.diff.report.json), [large assembled prompt](evidence/prompt-test/pr-20.diff.prompt.txt), and [large report](evidence/prompt-test/pr-20.diff.report.json). Reports include input fingerprints. The large case passed its expected-overflow test; it did not pass for submission to a model.
+These earlier preparation tests used an 800,000-token allowance to exercise the check. That was a test setting, not a verified model limit. In the later three-model comparison, we used a 16,000-token limit for the assembled prompt and a 32,000-token input allowance for each model request as file lookups added context, with up to 4,096 output tokens. These settings are separate from the earlier preparation experiment.
 
-**Limit:** these historical allowances are experiment settings, not current model limits. All these checks use character count divided by three, rounded up. They prove the gate's behavior, not exact tokenizer-level context fit or a spending cap.
+**Evidence:** [smaller prompt](evidence/prompt-test/pr.diff.prompt.txt), [smaller-prompt report](evidence/prompt-test/pr.diff.report.json), [larger prompt](evidence/prompt-test/pr-20.diff.prompt.txt), and [larger-prompt report](evidence/prompt-test/pr-20.diff.report.json). The earlier experiment that measured and trimmed only the diff is preserved in [development history](README-history.md).
+
+**Open questions and pending work:**
+
+- Is our chosen allowance of 32,000 estimated input tokens per model request appropriate? Do these reviews need that much room, or would a smaller allowance provide enough context at lower cost? This is an assumption to evaluate, not the model's maximum or an amount consumed automatically.
+- We currently estimate tokens by dividing the character count by three and rounding up. Should we use model-specific token counting or another verified method instead?
+- How should we choose input and output allowances for each model while keeping enough room for useful repository lookups?
 
 ### 4. Automate preparation and verify it in Docker
 
