@@ -9,7 +9,7 @@ Build a self-hosted PR reviewer that prioritizes project architecture guidelines
 - **Local PR-to-comment loop demonstrated:** a saved review was posted to the intended Android PR line; repeating publication detected the existing review. [Posted test comment](https://github.com/abhinavkumar17/nowinandroid/pull/1#discussion_r4117992844).
 - **Three-model comparison complete:** Claude Sonnet 4.6, OpenAI GPT 5.5, and Gemini 2.5 Pro found all four seeded issue categories in the same fifteen-file fixture. Fix quality, duplication, tool use, and cost differed. Total recorded model cost was about **$0.413 USD**. [Findings, cost, tokens, tools, and original responses](evidence/model-comparison/README.md).
 - **Prompt assembly and budget gates demonstrated:** complete prompts are checked before review, with additional estimated checks during repository-aware review. Oversized preparation stops before calling a model. [Prompt evidence](evidence/prompt-test/pr.diff.report.json) and [Docker overflow proof](evidence/live-docker-test/twenty-commits/summary.json).
-- **Cloud preparation only demonstrated:** a manual Fargate preparation run uploaded evidence to S3. The full model-review and publishing flow has not yet been verified in AWS.
+- No AWS/Fargate setup
 
 These are controlled prototype results, not evidence of general review accuracy, production readiness, or superiority over Copilot. The Android fixture was not compiled or executed. Token estimates are approximate; format and location validation do not establish semantic correctness.
 
