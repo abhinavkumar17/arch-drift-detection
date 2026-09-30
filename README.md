@@ -13,13 +13,32 @@ Build a self-hosted PR reviewer that prioritizes project architecture guidelines
 
 These are controlled prototype results, not evidence of general review accuracy, production readiness, or superiority over Copilot. The Android fixture was not compiled or executed. Token estimates are approximate; format and location validation do not establish semantic correctness.
 
-## Implemented workflow
+## Local flow
 
-PR revisions or saved diff → annotation and prompt assembly → budget gate → Pi/model with optional repository lookup → finding validation → saved evidence → publication preview → explicit posting.
+The local PR-to-comment path has been demonstrated. Preparation runs in Docker; Pi and the publisher run on the laptop. OpenRouter supplies the selected model remotely.
 
-Both review entry points now require OpenRouter; the default model is Claude Sonnet 4.6. Automated reviews do not fall back to Codex sign-in. Provider access and model usage are separate from this project's development chat.
+```mermaid
+flowchart TD
+    PR["GitHub PR"] --> ACQUIRE
+    subgraph LOCAL["Developer laptop — implemented"]
+        ACQUIRE["PR coordinator: review_pr.py<br/>Fetch fixed revisions and build diff"] --> PREP
+        DIFF["Saved diff + optional source checkout"] --> PREP
+        subgraph DOCKER["Docker — preparation only"]
+            PREP["entrypoint.py + core.prompt<br/>Annotate diff and assemble prompt"] --> GATE{"Complete prompt<br/>within estimated budget?"}
+        end
+        GATE -->|No| STOP["Save failure evidence; stop"]
+        GATE -->|Yes| PI["review_local.py + Pi adapter<br/>Model and tool conversation<br/>Per-request budget checks"]
+        PI <-->|Read-only lookup| SOURCE["Tracked source snapshot<br/>Find files, search text, read lines"]
+        PI --> VALIDATE["Response validator<br/>JSON fields and changed-line locations"]
+        VALIDATE --> SAVE["Local evidence<br/>Findings, responses, usage and tool logs"]
+        SAVE --> PUBLISH["publish_review.py<br/>Preview; recheck revisions and duplicates"]
+        PUBLISH -->|Explicit posting command| COMMENT["Publish validated review"]
+    end
+    PI <-->|Model requests and responses| OR["OpenRouter<br/>Selected model"]
+    COMMENT --> GH["GitHub inline PR comment"]
+```
 
-The usual local workflow uses Docker for preparation and Pi on the host. The fifteen-file comparison used local preparation. The current Docker image does **not** package the full review and publishing workflow.
+Saved-diff reviews can stop at local evidence. Posting requires a PR-linked run and an explicit publication step. Validation checks format and location, not reasoning accuracy. Both review entry points require OpenRouter, with Claude Sonnet 4.6 as the default; they do not fall back to Codex sign-in. The fifteen-file comparison used local prompt preparation instead of Docker.
 
 ## Development milestones: why, tests, and evidence
 
