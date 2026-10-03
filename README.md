@@ -189,3 +189,5 @@ Older implementation explanations and experiments are preserved in [development 
 ## Pending work and AWS sequence
 
 - [ ] Verify repeat posting: repeat the posting step using the same saved review and confirm that no duplicate PR comment is created. Save the result as evidence.
+
+See [local PR review commands](LOCAL_PR_REVIEW.md) for fetching, reviewing, and explicitly posting a saved result. See [webhook configuration](lambda/README.md) for the separate Lambda intake prototype.

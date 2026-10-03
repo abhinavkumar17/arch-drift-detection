@@ -82,6 +82,31 @@ def pi_command(executable):
     return [executable]
 
 
+def parse_model_response(text):
+    """Extract one JSON object; preserve raw evidence and reject ambiguous output."""
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError('Duplicate JSON field: ' + key)
+            result[key] = value
+        return result
+    def invalid_constant(value):
+        raise ValueError('Invalid JSON constant: ' + value)
+    decoder = json.JSONDecoder(object_pairs_hook=unique, parse_constant=invalid_constant)
+    text = text.lstrip('\ufeff').strip()
+    start = next((i for i, char in enumerate(text) if char in '{['), None)
+    if start is None:
+        raise ValueError('No JSON response found.')
+    # Never search inside a malformed first object for a later usable answer.
+    payload, end = decoder.raw_decode(text, start)
+    if any(char in '{}[]' for char in text[end:]):
+        raise ValueError('Ambiguous JSON response or structural text outside the response.')
+    if not isinstance(payload, dict):
+        raise ValueError('Response must be a JSON object.')
+    return payload
+
+
 def validate_response(payload, diff):
     from core.annotate import annotate, allow_list, is_in_diff
     if not isinstance(payload, dict) or set(payload) != {'findings', 'limitations'}:
@@ -108,14 +133,17 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--diff', type=Path, required=True)
     parser.add_argument('--repo', type=Path, help='Enable read-only source lookup from this checkout; diff must match HEAD changes')
+    parser.add_argument('--base', help='Full merge-base commit SHA for a clean, committed PR checkout; requires --repo')
     parser.add_argument('--context-budget', type=int, default=32000, help='Estimated per-request context limit in lookup mode, separate from initial prep budget')
     parser.add_argument('--output', type=Path, default=Path('out/local-reviews'))
     parser.add_argument('--image', default='arch-drift')
     parser.add_argument('--budget', type=int, default=16000)
-    parser.add_argument('--provider', default='openai-codex')
-    parser.add_argument('--model', default='gpt-5.5')
+    parser.add_argument('--provider', choices=['openrouter'], default='openrouter', help='Reviews use OpenRouter only; other providers are rejected.')
+    parser.add_argument('--model', default='anthropic/claude-sonnet-4.6')
     parser.add_argument('--timeout', type=int, default=600, help='Seconds allowed for each external step')
     args = parser.parse_args(argv)
+    if args.base and not args.repo:
+        parser.error('--base requires --repo.')
     if args.budget <= 0 or args.timeout <= 0 or args.context_budget <= 0:
         parser.error('Budget and timeout must be positive.')
     if not args.diff.is_file():
@@ -154,7 +182,8 @@ def main(argv=None):
         if args.repo:
             from repo_context import snapshot_repository
             say('PREPARATION: capturing tracked source files for read-only lookup.')
-            manifest = snapshot_repository(args.repo, source, folder / 'repository')
+            manifest = (snapshot_repository(args.repo, source, folder / 'repository', base=args.base)
+                        if args.base else snapshot_repository(args.repo, source, folder / 'repository'))
             status['repository_head'] = manifest['head']
             status['repository_files'] = len(manifest['files'])
             status['review_mode'] = 'repository_lookup'
@@ -218,7 +247,7 @@ def main(argv=None):
         if code:
             raise RuntimeError('Pi failed; inspect model-errors.log and model-response.txt.')
         phase = 'invalid_response'
-        payload = validate_response(read(folder / 'model-response.txt'), source.read_text(encoding='utf-8-sig'))
+        payload = validate_response(parse_model_response((folder / 'model-response.txt').read_text(encoding='utf-8-sig')), source.read_text(encoding='utf-8-sig'))
         save(folder / 'findings.json', payload)
         status['finding_count'] = len(payload['findings'])
         status['limitation_count'] = len(payload['limitations'])
