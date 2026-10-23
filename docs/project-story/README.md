@@ -51,3 +51,39 @@ Selecting fewer sections might reduce the starting prompt, but it does not guara
 So these are two different decisions: **first, whether to run an AI review; then, which review instructions to include.**
 
 *Current status: automatic selection of these instructions is not yet connected to the main PR review command.*
+
+## 4. Preparing the code for review
+
+Once we decide to review a PR, we need to prepare the changes so the model can read them and return comments we can place on GitHub.
+
+First, we fetch the versions of the code being compared. This gives the review a fixed starting point. If someone updates the PR afterward, we need to know that before posting an older review.
+
+Next, we label the diff: which lines were added, which were removed, and which are surrounding context. We also record the locations where comments are allowed. This lets us check that a finding points to a valid changed line rather than an unrelated part of the file.
+
+We then combine the diff with the review instructions and estimate the size of the complete request. If it exceeds the configured input limit, preparation stops before calling the model. We do not silently remove files to make it fit, because that could hide information needed to understand the change.
+
+This size check helps control what we send, but it is not a complete spending limit. The model may request more code during the review, and its response also uses tokens.
+
+We keep a source snapshot available for those requests. The model receives the diff first and can inspect supporting code when it needs to understand an interface, implementation, or caller.
+
+*Current status: this preparation exists. The main workflow still uses its older instruction assembly; connecting the newer shared base and focus files remains integration work.*
+
+## 5. Running the review with Pi
+
+A review does not always finish with one request and one answer. The model may need to ask, "Where is this interface implemented?" or "How does the other screen use this function?"
+
+We chose Pi to handle that conversation instead of building the conversation and tool-call handling ourselves.
+
+Our runner sends the prepared review to the selected model through Pi. If the model requests supporting code, our read-only tools can find files, search text, or return relevant lines. That code becomes part of the next request, and the review continues.
+
+The responsibilities are separate:
+
+- **Our runner** supplies the instructions, source access, limits, and output checks.
+- **Pi** manages the conversation with the model and its tool calls.
+- **OpenRouter** provides access to the selected model.
+
+These additional requests matter for cost. A shorter starting prompt does not necessarily mean a cheaper review: the model may investigate more files or produce a longer answer. We therefore need to measure the whole review, not just its first request. The runner also checks the estimated input size again as supporting code is added.
+
+When the model finishes, we validate the response structure and comment locations, then save the result for inspection. These checks make the response usable; they do not prove that its reasoning is correct. Posting the findings to GitHub is a separate, explicit step.
+
+*Current status: reviews with supporting-code lookups have been demonstrated. The newer classifier, prompt selection, and model policy still need to be connected and verified together in the main workflow.*
