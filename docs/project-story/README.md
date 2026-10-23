@@ -87,3 +87,55 @@ These additional requests matter for cost. A shorter starting prompt does not ne
 When the model finishes, we validate the response structure and comment locations, then save the result for inspection. These checks make the response usable; they do not prove that its reasoning is correct. Posting the findings to GitHub is a separate, explicit step.
 
 *Current status: reviews with supporting-code lookups have been demonstrated. The newer classifier, prompt selection, and model policy still need to be connected and verified together in the main workflow.*
+
+## 6. What happened when we ran the reviews?
+
+Once we had the review instructions and supporting-code tools, we wanted to answer a practical question: **could a lower-cost model give us useful findings, or did we need a frontier model?**
+
+We used saved Android changes and ran them through GLM, DeepSeek, and GPT. For these comparisons, we included the shared base and all three focus sections. We did not use classification to choose different instructions: we wanted to compare the models without also changing what they were asked to check.
+
+Each model received the full diff and could inspect supporting files. These were controlled examples, not live production PRs.
+
+### First: repeated API calls after a failure
+
+We introduced a change that retries an API call whenever it throws an IOException. Under persistent failure, it keeps calling the API instead of reaching the code that shows the failure state.
+
+We asked the models to review the change without telling them the expected finding.
+
+| Model | What came back | Recorded cost for the broken-version review |
+| --- | --- | ---: |
+| GLM | Reported the repeated retries as an issue. | $0.00296 |
+| DeepSeek | Noticed the retries but treated the intended behavior as uncertain. | $0.00222 |
+| GPT | Reported the repeated retries as an issue. | $0.07061 |
+
+GLM showed that a cheaper model could identify this problem. However, detecting the issue did not make every suggested fix correct: advice to add limited retries or backoff did not fully match our intended behavior of showing failure after one attempt.
+
+These runs also had different output allowances—GPT had a larger allowance—and acceptance handling evolved during the experiments. They are useful observations, not a tightly controlled ranking.
+
+### Next: a change affecting two screens
+
+We then checked whether the reviewer could connect a repository change to its callers.
+
+Home and Account both request the same data. The working version shares an ongoing request. The broken version starts another request instead of sharing it. A local coroutine test confirmed **one backend call in the working version and two in the broken version**.
+
+Each model reviewed both versions. This let us check whether it caught the defect and whether it incorrectly complained when sharing worked.
+
+| Model | Broken-version result | False alarm about sharing in the working version? | Recorded cost for both reviews |
+| --- | --- | --- | ---: |
+| GLM | Noticed duplicate calls but left them as uncertainty. | No | $0.00711 |
+| DeepSeek | Reported the defect, connected both screens, and suggested restoring request sharing. | No | $0.00604 |
+| GPT | Reported the defect, connected both screens, and suggested restoring request sharing. | No | $0.14549 |
+
+Both versions were part of a 17-file fixture containing four older planted issues. "Working" refers only to the request-sharing behavior, not to the entire change being free of bugs.
+
+### What we took from these results
+
+The second example changed the picture from the first. GLM did well on retries, but DeepSeek did better on shared requests. GPT reported both target issues, at a substantially higher recorded cost.
+
+That supports keeping lower-cost models in consideration. It does not support declaring GLM or DeepSeek the permanent winner. Our saved pilot policy therefore remains provisional: GLM as the default candidate, DeepSeek as another low-cost option, and GPT as the frontier option. Automatic switching between them is not implemented.
+
+The costs above are in USD and include each listed review's follow-up requests. They do not include every earlier failed attempt or the total research spend. The first table covers one review per model; the second covers two.
+
+These examples show useful findings and concrete trade-offs. They do not yet establish production accuracy or savings from classification. The next evidence should come from real PRs rather than more planted examples.
+
+[Supporting research report](../research/README.md) · [Shared-request per-run metrics](../research/shared-request-metrics.csv)
