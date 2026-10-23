@@ -1,76 +1,53 @@
 # Building a useful, affordable AI code reviewer
 
-## Why we started
+## 1. Why we started
 
-The starting idea was simple: when a developer opens a PR, could we give the lead a useful first review before they start going through the code?
+When a developer raises a PR, a lead needs to read the changes, understand the surrounding code, and check whether the implementation follows the team's expectations.
 
-A lead needs to read the changes, understand the surrounding implementation, and check whether the change follows the team's expectations. We wanted to reduce some of that effort by bringing potential problems—and the evidence behind them—to the reviewer's attention.
+We wanted to give the lead a useful first pass before that review: possible problems, the code that supports each finding, and an explanation of what could go wrong. The lead still decides whether the finding is valid.
 
-Cost mattered too. The system needs to be affordable enough to use regularly. We didn't want every PR to depend on an expensive frontier model. We wanted to understand where lower-cost models could produce useful reviews and when a frontier model justified its additional cost.
+Cost was part of the idea from the beginning. We wanted a system we could use regularly, without depending on an expensive frontier model for every change.
 
-We started with architecture because we already had guidelines to work from. Could the reviewer recognize a repository boundary being bypassed or a screen changing state owned by a ViewModel?
+## 2. Does every PR need an AI review?
 
-The early results were useful, but detecting a suspicious line wasn't enough. Some findings needed supporting code to establish their impact. Others identified a real problem but gave an inaccurate explanation or an incomplete fix. Those results shaped both the review instructions and how we evaluated the output.
+Before sending a PR to a model, we want to ask whether it needs that review at all.
 
-## Why we use four prompt files
+For example, a PR that only updates translated text may not need the same review as a change to login behavior. If we can reliably recognize routine changes, we may be able to avoid unnecessary model calls.
 
-As we expanded the review to correctness and security, we separated the instructions into four files:
+That is the proposed job of the classifier. **How it should make that decision is still open:**
 
-| Prompt file | Responsibility |
-| --- | --- |
-| **Shared base** | Rules for every review: require evidence, anchor comments to changed lines, acknowledge missing context, and return a consistent response. |
-| **Correctness** | Check whether the change can cause incorrect behavior, including lifecycle and concurrency problems. |
-| **Security** | Check for unauthorized access or sensitive-data exposure, supported by a concrete path to the problem. |
-| **Architecture** | Apply the project's rules for boundaries, contracts, and state ownership. |
+- **Local checks:** use code to inspect the files and changes against agreed rules. This adds no LLM token cost, but the rules will only cover cases we have defined.
+- **LLM classification:** ask a model to assess the change. This adds cost and can make mistakes, so we need to establish whether it avoids enough review work to be worthwhile.
+- **A combination:** use local checks first and ask a model only when those checks cannot decide.
 
-The base keeps common rules consistent. Separate focus files let us refine one area without rewriting the others. Each focus explains what to avoid, what to prefer, what justifies a comment, and which exceptions should prevent false alarms.
+The cost question is simple: **does classification cost less than the reviews it helps us avoid?** We need to compare the full cost of classification plus the remaining reviews against reviewing every PR. We also need to check that the savings do not come from skipping changes that needed attention.
 
-This structure also lets us explore selecting only the relevant instructions for a PR. A classifier proposes the focuses; uncertain classification falls back to a full review. **Whether selection saves money remains an open question.** In our early comparisons, shorter instructions sometimes led to more investigation and a higher total cost.
+We have not set an acceptable classifier-call budget or approved automatic skipping. For now, an uncertain decision should lead to review. A small diff alone is not a reason to skip it.
 
-These files do not create four separate model reviews. The base and chosen focuses are assembled into one review. The model receives the full diff and can inspect supporting code, so it can connect changes across files.
+*Current status: local classification rules exist, but they are advisory. They do not automatically skip reviews.*
 
-## How one PR moves through the system
+## 3. If the PR needs review, what should we ask the model to check?
 
-Imagine a PR changes a repository used by both Home and Account. The change is in one place, but its effect may reach both screens.
+We could send the diff directly to a model and say, "Review this." But the diff tells it what changed—not all the expectations our team has for that code.
 
-**1. Prepare the change.**
+For example, a screen calling the database directly might work, but violate our rule that data access goes through a repository. The reviewer needs that rule to explain why the change is a problem.
 
-We give the local runner a GitHub PR link. It fetches the revisions, prepares the diff, marks which changed lines can receive comments, and makes a source snapshot available for investigation. This preparation already exists.
+We therefore made our review expectations explicit in three areas:
 
-**2. Select the review guidance.**
+- **Correctness:** can this change make the app behave incorrectly?
+- **Security:** can it allow unauthorized access or expose sensitive data?
+- **Architecture:** does it break the project's rules about responsibilities, boundaries, or ownership?
 
-The classifier proposes relevant focus areas. The intended integration combines those focuses with the shared base. The classifier exists locally, but its suggestions do not yet automatically select prompts in the main PR command.
+We chose correctness, security, and architecture as our starting review areas because they reflect how we review mobile applications. They are not a fixed list for every project. We can adjust the rules or add other areas based on the project's domain and the team's needs.
 
-**3. Let one model investigate.**
+For each PR, we then choose the relevant instructions from that agreed set.
 
-The model receives the instructions and full diff. If it needs to understand how Home and Account use the repository, it can request related files through limited, read-only tools.
+A **shared base** holds the rules that apply to all three: show evidence, point to the changed line, and say when information is missing.
 
-Pi manages the conversation and tool calls. Our runner supplies the instructions, code access, and limits. OpenRouter provides access to the selected model. We have demonstrated this investigation flow; the newer prompt files and model policy still need connecting to the main command.
+That gives us four prompt files: one base and three focuses. Keeping them separate lets us refine each area and potentially select only the instructions relevant to a PR. They are combined for one review; we do not split related files between different reviewers.
 
-**4. Validate and save the result.**
+Selecting fewer sections might reduce the starting prompt, but it does not guarantee a cheaper review. The model may still spend more on supporting-code lookups and follow-up requests. Our early experiments did not establish consistent savings.
 
-The runner checks the response structure and comment locations, then saves the findings and run records. These checks establish that the output can be processed; they do not establish that the finding is correct. A developer still assesses its explanation and proposed fix. Our experiments also recorded token usage and cost.
+So these are two different decisions: **first, whether to run an AI review; then, which review instructions to include.**
 
-**5. Preview and publish.**
-
-The publisher prepares the GitHub comments for inspection. Posting is a separate, explicit action, with checks for changed PR revisions and an already-posted matching review. An earlier local run successfully posted a finding on the correct PR line.
-
-## What the experiments taught us
-
-We compared models on detection, explanation accuracy, fix quality, completion, and cost—not just the number of comments.
-
-The results did not produce one clear winner. GLM reported the automatic-retry issue that DeepSeek left uncertain. In the overlapping-request scenario, DeepSeek and GPT reported the defect and its impact on both screens, while GLM described duplicate calls as a limitation rather than a finding.
-
-GPT produced useful frontier-model results, at a higher recorded cost in these comparisons. Claude produced useful raw findings too, but output-limit and formatting failures affected whether those results could be accepted. That is a reliability observation about these runs, not proof that Claude cannot review the code.
-
-Our direction is to keep model choice configurable and cost visible. The saved pilot policy lists GLM as the provisional default, GPT as the frontier option, and DeepSeek as another low-cost option. This policy is not yet wired into the main runner. Automatic escalation to a frontier model has not been implemented or validated.
-
-The detailed findings and costs remain in the separate [research report](../research/README.md) and [per-run metrics](../research/shared-request-metrics.csv).
-
-## Where we are now
-
-We have demonstrated an earlier local PR-to-comment workflow and useful findings on controlled examples. We also have newer prompts, classification work, and model comparisons saved locally.
-
-The next step is to connect those newer decisions to the existing workflow and verify the combined result. We then want to assess it on a real historical PR, using the version before a substantive human correction and withholding the later review comments and fix from the model.
-
-The goal remains a useful, affordable first pass that reduces the lead's workload. The experiments support continuing the POC; they do not yet prove production readiness or a reduction in review time. Webhooks and cloud deployment can follow once the integrated local flow is working.
+*Current status: automatic selection of these instructions is not yet connected to the main PR review command.*
