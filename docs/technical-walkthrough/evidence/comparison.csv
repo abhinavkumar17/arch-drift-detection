@@ -1,0 +1,7 @@
+model,case,valid_output,findings,cost_usd,input_tokens,output_tokens,reasoning_tokens,lookups,seconds,shared_request_defect
+glm,control,True,4,0.003629844,50970,4593,3177,4,63.5,not flagged (correct)
+glm,regression,True,4,0.0034814456,50843,4299,2814,4,139.3,recognized only in limitation; missed finding
+deepseek,control,True,4,0.002970209,66989,5501,3509,8,61.2,not flagged (correct)
+deepseek,regression,True,5,0.003074251,48099,6968,5083,8,63.6,"valid finding, both screens explained, appropriate fix"
+gpt,control,True,4,0.0705494,51245,2103,705,9,25.2,not flagged (correct)
+gpt,regression,True,5,0.0749388,85109,2235,673,11,31.6,"valid finding, both screens explained, appropriate fix"

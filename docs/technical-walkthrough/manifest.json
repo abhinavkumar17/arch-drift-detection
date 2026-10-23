@@ -1,0 +1,82 @@
+[
+  {
+    "file": "references/code/classify_pr.py",
+    "description": "Classifier implementation",
+    "sha256": "730fd76ade5dc1cbf54b75c7cbc2c4637a4629631d1417448eacbd6a964ef772"
+  },
+  {
+    "file": "references/code/CLASSIFICATION.md",
+    "description": "Classifier behavior and limitations",
+    "sha256": "22f9e122abd12d043d9e8de1c214ba1e8a8d418d4249d0948646cf9bbf1c7449"
+  },
+  {
+    "file": "references/code/test_classify_pr.py",
+    "description": "Classifier tests",
+    "sha256": "0452973e256f8ba7f97f798c062aeb0bd51e3879b149c9f762ad6a8c56b32163"
+  },
+  {
+    "file": "references/prompts/base.template.md",
+    "description": "Frozen base prompt",
+    "sha256": "2e25a47911aef8feadccacfb2e53e833cfae4e2788b78cd3afd64582448eb4cd"
+  },
+  {
+    "file": "references/prompts/correctness.md",
+    "description": "Correctness focus",
+    "sha256": "8555877bf8406846b689cb768bc7c23ed97d5e01f9e9f903d10a4151252e5526"
+  },
+  {
+    "file": "references/prompts/security.md",
+    "description": "Security focus",
+    "sha256": "f0ee98e6d9c42397c740c6f621fddc0e6a397f1353f6311cf77dbd04ae7f1076"
+  },
+  {
+    "file": "references/prompts/architecture.md",
+    "description": "Architecture focus",
+    "sha256": "52a1e082eb6a36e61e8a99074da61415c6baf73d892631413a5f57af4478853c"
+  },
+  {
+    "file": "references/prompts/prompt_builder.py",
+    "description": "Prompt builder",
+    "sha256": "d960bca46f2a84c0df1cff32865dade44fe9afb925d52ef37ff731ceee902e21"
+  },
+  {
+    "file": "references/code/repo_tools.mjs",
+    "description": "Repository lookup tools",
+    "sha256": "04f5d98f756d6defbd764ff28b008c6cfd125e9fd9497db2244e59cdaa0d4dd2"
+  },
+  {
+    "file": "references/code/pi_repo_review.mjs",
+    "description": "Pi adapter",
+    "sha256": "1fc71f90e6fbf31d0a800e7e8e4c5a46efab2946a83649d637cf0de8a97ca659"
+  },
+  {
+    "file": "evidence/prompt.txt",
+    "description": "GLM starting prompt",
+    "sha256": "bebcbeff8d1c2af83801980f2bf70ddb7ee4dbda7f82f30c30570453bb96524e"
+  },
+  {
+    "file": "evidence/events.jsonl",
+    "description": "GLM lookup requests and returned excerpts",
+    "sha256": "7b277018d4c616b077ced1601372802f726fe4a21193cbcdd6de2a133411acd8"
+  },
+  {
+    "file": "evidence/findings.json",
+    "description": "GLM findings and limitations",
+    "sha256": "c8e063891fcc03df22085172b9519e9a855e5451d7b239a8885edaf0be5aeaec"
+  },
+  {
+    "file": "evidence/result.json",
+    "description": "GLM run summary and cost",
+    "sha256": "1ee8b8ffc454b08c46116fc7914ddaf29df4a10a89757d55272a353a53a797c0"
+  },
+  {
+    "file": "evidence/runtime-results.json",
+    "description": "Shared-request runtime evidence",
+    "sha256": "2d65a4498a97d42b53ff2ee4ef61d385430ed0b034ed847285bcd00c36ae626e"
+  },
+  {
+    "file": "evidence/comparison.csv",
+    "description": "Model comparison metrics",
+    "sha256": "576992599e368f9f9cf5e0133f337e3cafc2815b21d0cb29474c9b5c33ee0e00"
+  }
+]

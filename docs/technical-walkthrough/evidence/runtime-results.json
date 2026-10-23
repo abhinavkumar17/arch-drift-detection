@@ -1,0 +1,16 @@
+[
+  {
+    "case": "control",
+    "overlap_calls": 1,
+    "both_failed": true,
+    "automatic_retries": 0,
+    "later_request_and_cache": true
+  },
+  {
+    "case": "regression",
+    "overlap_calls": 2,
+    "both_failed": true,
+    "automatic_retries": 0,
+    "later_request_and_cache": true
+  }
+]

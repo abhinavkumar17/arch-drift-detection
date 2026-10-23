@@ -1,0 +1,48 @@
+{
+  "findings": [
+    {
+      "path": "core/data/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/OfflineFirstUserDataRepository.kt",
+      "line": 55,
+      "side": "RIGHT",
+      "principle": "CORR-1",
+      "title": "markNewsResourcesRead marks articles as unread instead of read",
+      "explanation": "The new implementation passes `false` to setNewsResourceViewed, so the 'mark all saved articles read' flow clears the viewed flag for every supplied id instead of setting it. The new interface contract (line 46-47: 'Marks the supplied articles as read') and the parallel fake implementations contradict this: FakeUserDataRepository (core/data-test, line 50-53) calls setNewsResourceViewed(id, true), TestUserDataRepository adds the ids to viewedNewsResources, and the new OfflineFirstUserDataRepositoryTest at line 260-270 expects viewedNewsResources to contain the passed ids after markNewsResourcesRead. Triggering the bookmarks screen button (BookmarksScreen 'Mark all saved articles read' \u2192 BookmarksViewModel.markAllSavedResourcesRead \u2192 this method) produces the opposite of the advertised behavior: articles that were already read lose their read state, and unread ones stay unread, so the UI keeps showing them as unread and the new core/data test fails.",
+      "evidence": "core/data/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/OfflineFirstUserDataRepository.kt:53-57 `newsResourceIds.forEach { id -> niaPreferencesDataSource.setNewsResourceViewed(id, false) }` versus the sibling setNewsResourceViewed override at line 59-60 that forwards the caller's `viewed` argument; core/data-test FakeUserDataRepository.kt:50-53 uses `true`; OfflineFirstUserDataRepositoryTest.kt:268 asserts `assertEquals(setOf(\"existing\", \"first\", \"second\"), actual.viewedNewsResources)`.",
+      "suggested_change": "Pass `true` instead of `false`: `niaPreferencesDataSource.setNewsResourceViewed(id, true)` inside the forEach loop."
+    },
+    {
+      "path": "feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsDialog.kt",
+      "line": 142,
+      "side": "RIGHT",
+      "principle": "CORR-2",
+      "title": "Thread.sleep(5_000) blocks the main thread in a Compose click handler",
+      "explanation": "The onClick lambda of NiaTextButton executes on the main (UI) thread. The newly added `Thread.sleep(5_000)` parks the main thread for 5 seconds every time the user taps 'Reset appearance': all input, animation and rendering is frozen for the duration, and on Android an input dispatch blocked for more than ~5 seconds is eligible for an Application Not Responding dialog, so the tap can crash-terminate the app. The delay serves no purpose for the reset itself \u2014 resetAppearance (SettingsViewModel.kt:58-64) is a suspend write launched in viewModelScope and does not depend on this sleep.",
+      "evidence": "feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsDialog.kt:141-144 `NiaTextButton(onClick = { Thread.sleep(5_000); onResetAppearance() })` \u2014 compose click handlers run on the main thread; SettingsViewModel.resetAppearance performs only datastore suspend writes.",
+      "suggested_change": "Remove `Thread.sleep(5_000)` and call `onResetAppearance()` directly: `NiaTextButton(onClick = onResetAppearance) { ... }`."
+    },
+    {
+      "path": "feature/settings/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/settings/impl/SettingsViewModel.kt",
+      "line": 60,
+      "side": "RIGHT",
+      "principle": "ARCH-1",
+      "title": "ViewModel writes directly to the datastore data source, bypassing the repository",
+      "explanation": "resetAppearance makes screen logic perform data access directly against NiaPreferencesDataSource, the raw DataStore-backed data source that sits behind OfflineFirstUserDataRepository. Every other mutation in this ViewModel (updateThemeBrand line 66-70, updateDarkThemeConfig line 72-76, updateDynamicColorPreference line 78+) goes through UserDataRepository. Inspected code (core/data/src/main/kotlin/com/google/samples/apps/nowinandroid/core/data/repository/OfflineFirstUserDataRepository.kt:62-75) shows the repository owns storage details and side effects: setThemeBrand, setDarkThemeConfig and setDynamicColorPreference also emit analytics events (logThemeChanged, logDarkThemeConfigChanged, logDynamicColorPreferenceChanged). By writing to the data source directly, resetAppearance skips those side effects (no appearance-reset analytics is ever logged) and ties the ViewModel to the storage implementation, so any change to how user preferences are stored (or any repository-level handling added for these fields) forces a change to this screen class.",
+      "evidence": "SettingsViewModel.kt:39 injects `NiaPreferencesDataSource` and lines 58-63 call `preferences.setThemeBrand(...)`, `preferences.setDarkThemeConfig(...)`, `preferences.setDynamicColorPreference(...)`; OfflineFirstUserDataRepository.kt:62-75 shows the same operations on the repository add analytics logging; SettingsViewModel.kt:66-80 shows the established pattern of going through `userDataRepository`.",
+      "suggested_change": "Drop the `NiaPreferencesDataSource` dependency and add/extend UserDataRepository methods (e.g. setThemeBrand, setDarkThemeConfig, setDynamicColorPreference already exist), calling those from resetAppearance so the repository owns data access and its side effects."
+    },
+    {
+      "path": "feature/bookmarks/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/bookmarks/impl/BookmarksViewModel.kt",
+      "line": 45,
+      "side": "RIGHT",
+      "principle": "ARCH-3",
+      "title": "Undo state made publicly mutable so the UI writes ViewModel state directly",
+      "explanation": "lastRemovedBookmarkId is changed from private to a public var solely so BookmarksScreen can overwrite it and shouldDisplayUndoBookmark from the UI layer (BookmarksScreen.kt:97-100 `clearUndoState = { viewModel.shouldDisplayUndoBookmark = false; viewModel.lastRemovedBookmarkId = null }`). This moves update logic for ViewModel-owned state into a call site: the invariant that the two fields are cleared together now lives in the screen's lambda, and any other caller of the now-public field can change one field without the other (e.g. a future code path that resets only the bookmark id leaves the snackbar flag true, or vice versa, desynchronizing the undo snackbar from the id it must act on). The ViewModel previously centralized this via its clearUndoState action (`clearUndoState = viewModel::clearUndoState` was removed at BookmarksScreen.kt:96), so the change replaces a single-owner update with a competing, UI-side write path.",
+      "evidence": "BookmarksViewModel.kt:44-45 `var shouldDisplayUndoBookmark by mutableStateOf(false)` / `var lastRemovedBookmarkId: String? = null` (was `private var`); BookmarksScreen.kt:96-100 replaces `viewModel::clearUndoState` with a lambda assigning both ViewModel fields; BookmarksViewModel.kt:57-63 shows the ViewModel is meant to own screen actions such as markAllSavedResourcesRead.",
+      "suggested_change": "Keep both fields private in the ViewModel and restore a single method, e.g. `fun clearUndoState() { shouldDisplayUndoBookmark = false; lastRemovedBookmarkId = null }`, and pass `clearUndoState = viewModel::clearUndoState` from BookmarksScreen."
+    }
+  ],
+  "limitations": [
+    "ServiceNoticeRepository.load (feature/bookmarks diff, sample/notice/ServiceNoticeRepository.kt:24-32) no longer reuses an in-flight Deferred, so concurrent callers such as NoticeGraph.home() and NoticeGraph.account() now issue separate api.fetchNotice() calls. All callers still await a request whose result is cached correctly, and no caller or test contradicts the new duplicate-fetch behavior, so no incorrect-result defect is reported; the lost request deduplication is noted here.",
+    "The build metadata (min/target SDK, release log stripping) is unknown, so no platform-version- or variant-dependent conclusions were drawn."
+  ]
+}

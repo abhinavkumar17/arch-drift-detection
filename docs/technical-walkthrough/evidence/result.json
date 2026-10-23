@@ -1,0 +1,50 @@
+{
+  "model": "z-ai/glm-5.3-flash",
+  "case": "regression",
+  "repetition": 1,
+  "mode": "plain",
+  "seconds": 139.3,
+  "status": "completed",
+  "format_status": "passed",
+  "failure_type": null,
+  "requests": 4,
+  "cost": 0.0034814456,
+  "lookup_calls": 4,
+  "context_per_request": [
+    {
+      "type": "request_budget",
+      "request": 1,
+      "estimated_tokens": 16336,
+      "serialized_context_chars": 49006,
+      "input_limit": 32000,
+      "output_reserve": 8192
+    },
+    {
+      "type": "request_budget",
+      "request": 2,
+      "estimated_tokens": 22550,
+      "serialized_context_chars": 67648,
+      "input_limit": 32000,
+      "output_reserve": 8192
+    },
+    {
+      "type": "request_budget",
+      "request": 3,
+      "estimated_tokens": 23248,
+      "serialized_context_chars": 69744,
+      "input_limit": 32000,
+      "output_reserve": 8192
+    },
+    {
+      "type": "request_budget",
+      "request": 4,
+      "estimated_tokens": 24359,
+      "serialized_context_chars": 73076,
+      "input_limit": 32000,
+      "output_reserve": 8192
+    }
+  ],
+  "reasoning_tokens": 2814,
+  "completion_tokens_total": 4299,
+  "findings": 4
+}
