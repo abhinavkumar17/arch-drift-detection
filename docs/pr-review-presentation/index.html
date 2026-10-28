@@ -15035,5 +15035,10 @@ trigger.onclick=e=>{e.stopPropagation();toggle()};trigger.onkeydown=e=>{if(e.key
 panel.querySelector('button').onclick=()=>panel.hidden=true;document.addEventListener('keydown',e=>{if(e.key==='Escape')panel.hidden=true});
 new MutationObserver(()=>panel.hidden=true).observe(document.getElementById('walk-status'),{childList:true});
 })();</script>
-</body>
+<style>
+#module-context-panel{position:relative;padding-top:64px!important}
+#module-context-panel .context-map{min-height:180px}
+@media(max-width:650px){#module-context-panel .context-map{height:auto;min-height:0;max-width:320px}}
+</style>
+<script>(()=>{const panel=document.getElementById('module-context-panel'),map=panel.querySelector('.context-map');panel.querySelector('h2').after(map);const original=map.innerHTML;function fit(){if(window.matchMedia('(max-width:650px)').matches){map.setAttribute('viewBox','0 0 300 360');map.innerHTML='<defs><marker id="context-vertical-tip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10Z" fill="#e7deef"/></marker></defs><g fill="#44334f" stroke="#b995cf"><rect x="25" y="15" width="250" height="70" rx="12"/><rect x="25" y="145" width="250" height="70" rx="12"/><rect x="25" y="275" width="250" height="70" rx="12"/></g><g fill="#fff" text-anchor="middle" font-family="Arial,sans-serif" font-size="19"><text x="150" y="44">Planning and</text><text x="150" y="69">analysis agents</text><text x="150" y="175">Static analysis</text><text x="150" y="199">engine</text><text x="150" y="305">Tool registry</text><text x="150" y="329">and installer</text></g><g stroke="#e7deef" stroke-width="2" marker-end="url(#context-vertical-tip)"><path d="M150 85 V139"/><path d="M150 215 V269"/></g><g fill="#eee5f6" font-family="Arial,sans-serif" font-size="13"><text x="163" y="107">Reads code</text><text x="163" y="125">relationships</text><text x="163" y="237">Locates required</text><text x="163" y="255">tools</text></g>'}else{map.setAttribute('viewBox','0 0 880 180');map.innerHTML=original}}fit();window.addEventListener('resize',fit);document.getElementById('module-context-trigger').addEventListener('click',()=>{if(!panel.hidden)panel.scrollIntoView({block:'start',behavior:'smooth'})});})();</script></body>
 </html>
