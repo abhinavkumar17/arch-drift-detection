@@ -1,0 +1,495 @@
+<!doctype html><html lang="en" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>PR review responsibility handoffs</title><style>:root{
+      --bg: #f4f5f7;
+      --grid: #e9edf2;
+      --canvas-dot: #e2e7ec;
+      --text: #111827;
+      --text-muted: #5b6474;
+      --text-dim: #9aa3b2;
+      --text-faint: #6b7280;
+
+      --panel: #ffffff;
+      --panel-border: #e5e7eb;
+      --lane-fill: rgba(248, 250, 252, 0.65);
+      --lane-stroke: #cbd5e1;
+
+      --arrow: #64748b;
+      --arrow-emphasis: #059669;
+
+      --mask: #ffffff;
+
+      --frontend-fill: rgba(34, 211, 238, 0.15);
+      --frontend-stroke: #0891b2;
+      --backend-fill: rgba(52, 211, 153, 0.18);
+      --backend-stroke: #059669;
+      --database-fill: rgba(167, 139, 250, 0.2);
+      --database-stroke: #7c3aed;
+      --cloud-fill: rgba(251, 191, 36, 0.18);
+      --cloud-stroke: #d97706;
+      --security-fill: rgba(251, 113, 133, 0.15);
+      --security-stroke: #e11d48;
+      --messagebus-fill: rgba(251, 146, 60, 0.15);
+      --messagebus-stroke: #ea580c;
+      --external-fill: rgba(148, 163, 184, 0.18);
+      --external-stroke: #64748b;
+
+      --toolbar-bg:       rgba(255, 255, 255, 0.92);
+      --toolbar-border:   #cbd5e1;
+      --toolbar-text:     #334155;
+      --toolbar-hover:    #ffffff;
+      --toolbar-menu-bg:  #ffffff;
+    --surface:#fff;--ink:#162339;--muted:#53667c;--line:#cbd7e5;--accent:#1565a7;--page:#eef2f7}[data-theme=dark]{
+      --bg: #020617;
+      --grid: #1e293b;
+      --canvas-dot: rgba(148, 163, 184, 0.16);
+      --text: #ffffff;
+      --text-muted: #94a3b8;
+      --text-dim: #475569;
+      /* UI chrome and menu hints need more contrast than SVG .t-dim accents */
+      --text-faint: #7d8da1;
+
+      --panel: rgba(15, 23, 42, 0.5);
+      --panel-border: #1e293b;
+      --lane-fill: rgba(15, 23, 42, 0.22);
+      --lane-stroke: #334155;
+
+      --arrow: #94a3b8;
+      --arrow-emphasis: #34d399;
+
+      /* Opaque mask color used behind semi-transparent component fills
+         so the arrows drawn underneath are properly hidden. */
+      --mask: #0f172a;
+
+      --frontend-fill:    rgba(8, 51, 68, 0.4);
+      --frontend-stroke:  #22d3ee;
+      --backend-fill:     rgba(6, 78, 59, 0.4);
+      --backend-stroke:   #34d399;
+      --database-fill:    rgba(76, 29, 149, 0.4);
+      --database-stroke:  #a78bfa;
+      --cloud-fill:       rgba(120, 53, 15, 0.3);
+      --cloud-stroke:     #fbbf24;
+      --security-fill:    rgba(136, 19, 55, 0.4);
+      --security-stroke:  #fb7185;
+      --messagebus-fill:  rgba(251, 146, 60, 0.3);
+      --messagebus-stroke:#fb923c;
+      --external-fill:    rgba(30, 41, 59, 0.5);
+      --external-stroke:  #94a3b8;
+
+      --toolbar-bg:       rgba(15, 23, 42, 0.8);
+      --toolbar-border:   #334155;
+      --toolbar-text:     #e2e8f0;
+      --toolbar-hover:    rgba(15, 23, 42, 0.95);
+      --toolbar-menu-bg:  #0f172a;
+    --surface:#0f1726;--ink:#eff5ff;--muted:#a8bad0;--line:#34475f;--accent:#77beff;--page:#070d16}*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.4 system-ui,sans-serif}main{max-width:1360px;margin:auto;padding:18px 28px}header{display:flex;align-items:center;justify-content:space-between;gap:24px}h1{font-size:24px;margin:0;letter-spacing:-.4px}header p{margin:3px 0;color:var(--muted)}nav{display:flex;gap:6px}button{font:600 13px system-ui;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:9px 13px;cursor:pointer}button[aria-selected=true],#next{color:white;background:#175b91;border-color:#175b91}button:disabled{opacity:.35;cursor:default}button:focus-visible{outline:3px solid #e9a52a;outline-offset:2px}.guide{display:grid;grid-template-columns:260px 1fr 235px;gap:18px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-top:14px;min-height:108px}.guide h2{font-size:18px;margin:4px 0}.guide p{color:var(--muted);margin:0}.overline{font-size:10px;letter-spacing:1px;font-weight:800;color:var(--accent)}.controls{display:flex;gap:5px;flex-wrap:wrap}.controls small{flex-basis:100%;color:var(--muted)}.diagram{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}.owners{position:relative;height:155px;border-bottom:1px solid var(--line);background:var(--surface)}.owner{position:absolute;top:14px;width:22%;height:128px;transform:translateX(-50%);border:2px solid var(--owner);border-radius:10px;padding:12px;text-align:center;background:color-mix(in srgb,var(--owner) 7%,var(--surface))}.owner h3{font:800 16px/1.2 system-ui;margin:6px 0 8px;letter-spacing:.3px}.owner p{font-size:11px;margin:0;color:var(--muted)}.owner small{font-size:9px;letter-spacing:1px;color:var(--owner);font-weight:800}.owner .data{display:block;font-size:10px;margin-top:7px;color:var(--muted)}.owner.secondary{top:36px;width:18%;height:91px;border-width:1px;border-style:dashed}.owner.secondary h3{font-size:13px;margin:7px 0}.owner.involved{box-shadow:0 0 0 3px color-mix(in srgb,var(--owner) 23%,transparent)}.timeline{height:365px;overflow-y:auto;overscroll-behavior:contain;scrollbar-color:var(--line) var(--surface)}.view[hidden]{display:none}.view svg{display:block;width:100%;height:auto;font-family:ui-monospace,Consolas,monospace}.view svg text{font-family:inherit}.view svg [data-node-id]{display:none}.view svg [data-edge-id] rect.c-mask{display:none}.view svg [data-edge-id] text{font-size:12px;paint-order:stroke;stroke:var(--surface);stroke-width:5px;stroke-linejoin:round;fill:var(--ink)}.view svg [data-edge-id] path{stroke-width:1.7}.local-note rect{fill:var(--surface);stroke:var(--line);stroke-width:1.1}.local-note text{font-size:11px;fill:var(--ink)}.local-note .local-caption{font-size:9px;fill:var(--muted)}.guided [data-edge-id],.guided .local-note{opacity:.2}.guided .active{opacity:1!important}.guided [data-edge-id].active path{stroke:var(--accent);stroke-width:3}.guided [data-edge-id].active text{fill:var(--accent);font-weight:800}.guided .local-note.active rect{stroke:var(--accent);stroke-width:2.3}.foot{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:9px}.foot b{color:var(--ink)}    .c-grid       { stroke: var(--grid); fill: none; }
+    .c-mask       { fill: var(--mask); stroke: none; }
+    .c-lane-rule  { stroke: var(--lane-stroke); fill: none; opacity: 0.7; }
+    .c-lane-wash  { fill: var(--lane-fill); stroke: none; }
+
+    .c-frontend   { fill: var(--frontend-fill);   stroke: var(--frontend-stroke); }
+    .c-backend    { fill: var(--backend-fill);    stroke: var(--backend-stroke); }
+    .c-database   { fill: var(--database-fill);   stroke: var(--database-stroke); }
+    .c-cloud      { fill: var(--cloud-fill);      stroke: var(--cloud-stroke); }
+    .c-security   { fill: var(--security-fill);   stroke: var(--security-stroke); }
+    .c-messagebus { fill: var(--messagebus-fill); stroke: var(--messagebus-stroke); }
+    .c-external   { fill: var(--external-fill);   stroke: var(--external-stroke); }
+    .t-primary { fill: var(--text); }
+    .t-muted   { fill: var(--text-muted); }
+    .t-dim     { fill: var(--text-dim); }
+    .t-frontend   { fill: var(--frontend-stroke); }
+    .t-backend    { fill: var(--backend-stroke); }
+    .t-database   { fill: var(--database-stroke); }
+    .t-cloud      { fill: var(--cloud-stroke); }
+    .t-security   { fill: var(--security-stroke); }
+    .t-messagebus { fill: var(--messagebus-stroke); }
+    .t-external   { fill: var(--external-stroke); }
+    .t-edge-default  { fill: var(--arrow); }
+    .t-edge-emphasis { fill: var(--arrow-emphasis); }
+    .t-edge-security { fill: var(--security-stroke); }
+    .t-edge-dashed   { fill: var(--database-stroke); }
+    .a-default   { stroke: var(--arrow); fill: none; }
+    .a-emphasis  { stroke: var(--arrow-emphasis); fill: none; }
+    .a-security  { stroke: var(--security-stroke); fill: none; stroke-dasharray: 5,5; }
+    .a-dashed    { stroke: var(--database-stroke); fill: none; stroke-dasharray: 4,4; }
+    .m-default   { fill: var(--arrow); }
+    .m-emphasis  { fill: var(--arrow-emphasis); }
+    .m-security  { fill: var(--security-stroke); }
+    .m-dashed    { fill: var(--database-stroke); }
+    .c-security-group { fill: transparent; stroke: var(--security-stroke); stroke-dasharray: 4,4; }
+    .c-region         { fill: rgba(251, 191, 36, 0.05); stroke: var(--cloud-stroke); stroke-dasharray: 8,4; }
+    .c-lane           { fill: var(--lane-fill); stroke: var(--lane-stroke); stroke-dasharray: 6,6; }@media(max-width:950px){header{display:block}nav{margin-top:10px}.guide{grid-template-columns:1fr}.diagram{overflow-x:auto}.owners,.timeline{min-width:900px}.timeline{height:420px}}</style><style>.presentation-switch{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;padding:10px 16px;background:#142234;color:#fff;font:600 14px/1.5 system-ui,sans-serif}.presentation-switch a{color:#c6e3ff;text-decoration:underline;text-underline-offset:3px}.presentation-switch a:focus-visible{outline:3px solid #ffcc66;outline-offset:4px}</style></head><body><nav class="presentation-switch" aria-label="Presentation pages"><a href="../pr-review-presentation/">← 1 · Review walkthrough</a><span aria-current="page">2 · How the review runs</span></nav><main><header><div><h1>Who owns each handoff?</h1><p>Responsibility handoffs · adapter wraps the Pi SDK model call</p></div><nav aria-label="Journey"><button id="normal-tab">Normal call</button><button id="tool-tab">Tool lookup + follow-up</button><button id="theme">Dark theme</button></nav></header><section class="guide" id="guide"><div><div class="overline" id="handoff"></div><h2 id="step-title"></h2></div><p id="explanation" aria-live="polite"></p><div class="controls"><small id="position"></small><button id="back">Back</button><button id="next">Next</button><button id="overview">Overview</button><button id="reset">Reset</button></div></section><section class="diagram"><div class="owners"><div class="owner " data-owner="code" style="left:14.537037037037038%;--owner:#159b79"><small>Python + JavaScript</small><h3>REVIEW RUNNER</h3><p>Prep / intake · request guard<br>Custom repo tools · validation</p><span class="data">▱ Snapshot = stored data</span></div><div class="owner " data-owner="pi" style="left:38.85802777777778%;--owner:#d78622"><small>Pi SDK</small><h3>PI ORCHESTRATOR</h3><p>Session · tool dispatch<br>Conversation · completion</p></div><div class="owner " data-owner="router" style="left:63.17900925925925%;--owner:#9c6bd5"><small>Routing service</small><h3>OPENROUTER</h3><p>Carries API requests<br>Carries model responses</p></div><div class="owner secondary" data-owner="model" style="left:87.5%;--owner:#70869d"><small>Separate model service</small><h3>LLM PROVIDER</h3><p>Reasoning + tool requests<br></p></div></div><div class="timeline" id="timeline" tabindex="0" aria-label="Scrollable responsibility timeline"><div class="view" id="normal" ><svg viewBox="0 145 1080 632" data-sequence-column-fit="spread" role="img" lang="en" aria-labelledby="archify-diagram-title archify-diagram-description" data-animation="trace" data-preset="classic" data-quality-profile="standard" data-motion-choreography="sequence">
+        <title id="normal-archify-diagram-title">Normal call: responsibilities</title>
+        <desc id="normal-archify-diagram-description">A sequence diagram generated by Archify.</desc>
+        <!-- Definitions -->
+        <defs>
+          <marker id="normal-arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" class="m-default" />
+          </marker>
+          <marker id="normal-arrowhead-emphasis" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" class="m-emphasis" />
+          </marker>
+          <marker id="normal-arrowhead-security" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" class="m-security" />
+          </marker>
+          <marker id="normal-arrowhead-dashed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" class="m-dashed" />
+          </marker>
+          <pattern id="normal-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" class="c-grid" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <!-- Background Grid -->
+        <rect width="100%" height="100%" fill="url(#normal-grid)" />
+
+        <!-- Time Segments -->
+
+
+        <g class="owner-bands"><rect x="33" y="145" width="248" height="632" fill="var(--backend-stroke)" opacity=".035"/><rect x="295.6667" y="145" width="248" height="632" fill="var(--messagebus-stroke)" opacity=".035"/><rect x="558.3333" y="145" width="248" height="632" fill="var(--cloud-stroke)" opacity=".035"/><rect x="821" y="145" width="248" height="632" fill="var(--external-stroke)" opacity=".035"/></g><!-- Lifelines -->
+        <path d="M 157 142 L 157 757" class="a-default" stroke-width="0.8" stroke-dasharray="3,7"/>
+        <path d="M 419.6666666666667 142 L 419.6666666666667 757" class="a-default" stroke-width="0.8" stroke-dasharray="3,7"/>
+        <path d="M 682.3333333333334 142 L 682.3333333333334 757" class="a-default" stroke-width="0.8" stroke-dasharray="3,7"/>
+        <path d="M 945 142 L 945 757" class="a-default" stroke-width="0.8" stroke-dasharray="3,7"/>
+
+        <!-- Activations -->
+
+
+        <!-- Messages --><g data-local-id="m1" class="local-note"><rect x="42" y="153" width="230" height="40" rx="7"/><text x="157" y="169" text-anchor="middle">01  Prepare + intake check</text><text x="157" y="184" text-anchor="middle" class="local-caption">Local work inside Review runner</text></g><g data-local-id="m10" class="local-note"><rect x="42" y="675" width="230" height="40" rx="7"/><text x="157" y="691" text-anchor="middle">10  Validate + save review</text><text x="157" y="706" text-anchor="middle" class="local-caption">Local work inside Review runner</text></g>
+        <g data-edge-from="code" data-edge-to="pi" data-edge-label="02  Initialize review session" data-edge-key="0" data-edge-id="m2">
+          <path data-composition-edge-from="code" data-composition-edge-to="pi" data-composition-edge-id="m2" data-composition-points="164,238;412.6666666666667,238" d="M 164 238 L 412.6666666666667 238" class="a-default" data-animate="edge" style="--step:0" stroke-width="1.4" marker-end="url(#normal-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="206.93333333333337" y="218" width="162.8" height="16" rx="3" class="c-mask"/>
+          <text x="288.33333333333337" y="228" class="t-muted" font-size="9" text-anchor="middle">02  Initialize review session</text>
+        </g>
+        </g>
+
+        <g data-edge-from="pi" data-edge-to="code" data-edge-label="03  Invoke JS request guard" data-edge-key="1" data-edge-id="m3">
+          <path data-composition-edge-from="pi" data-composition-edge-to="code" data-composition-edge-id="m3" data-composition-points="412.6666666666667,296;164,296" d="M 412.6666666666667 296 L 164 296" class="a-default" data-animate="edge" style="--step:1" stroke-width="1.4" marker-end="url(#normal-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="212.13333333333338" y="276" width="152.4" height="16" rx="3" class="c-mask"/>
+          <text x="288.33333333333337" y="286" class="t-muted" font-size="9" text-anchor="middle">03  Invoke JS request guard</text>
+        </g>
+        </g>
+
+        <g data-edge-from="code" data-edge-to="pi" data-edge-label="04  Budget check passed; continue" data-edge-key="2" data-edge-id="m4">
+          <path data-composition-edge-from="code" data-composition-edge-to="pi" data-composition-edge-id="m4" data-composition-points="164,354;412.6666666666667,354" d="M 164 354 L 412.6666666666667 354" class="a-default" data-animate="edge" style="--step:2" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#normal-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="196.53333333333336" y="334" width="183.6" height="16" rx="3" class="c-mask"/>
+          <text x="288.33333333333337" y="344" class="t-muted" font-size="9" text-anchor="middle">04  Budget check passed; continue</text>
+        </g>
+        </g>
+
+        <g data-edge-from="pi" data-edge-to="router" data-edge-label="05  Send review prompt" data-edge-key="3" data-edge-id="m5">
+          <path data-composition-edge-from="pi" data-composition-edge-to="router" data-composition-edge-id="m5" data-composition-points="426.6666666666667,412;675.3333333333334,412" d="M 426.6666666666667 412 L 675.3333333333334 412" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.4" marker-end="url(#normal-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="487.8" y="392" width="126.4" height="16" rx="3" class="c-mask"/>
+          <text x="551" y="402" class="t-muted" font-size="9" text-anchor="middle"><tspan x="551" dy="-12">05  Send review prompt</tspan><tspan x="551" dy="14">to model via OpenRouter</tspan></text>
+        </g>
+        </g>
+
+        <g data-edge-from="router" data-edge-to="model" data-edge-label="06  Route model request" data-edge-key="4" data-edge-id="m6">
+          <path data-composition-edge-from="router" data-composition-edge-to="model" data-composition-edge-id="m6" data-composition-points="689.3333333333334,470;938,470" d="M 689.3333333333334 470 L 938 470" class="a-default" data-animate="edge" style="--step:4" stroke-width="1.4" marker-end="url(#normal-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="747.8666666666668" y="450" width="131.60000000000002" height="16" rx="3" class="c-mask"/>
+          <text x="813.6666666666667" y="460" class="t-muted" font-size="9" text-anchor="middle">06  Route model request</text>
+        </g>
+        </g>
+
+        <g data-edge-from="model" data-edge-to="router" data-edge-label="07  Return final review" data-edge-key="5" data-edge-id="m7">
+          <path data-composition-edge-from="model" data-composition-edge-to="router" data-composition-edge-id="m7" data-composition-points="938,528;689.3333333333334,528" d="M 938 528 L 689.3333333333334 528" class="a-default" data-animate="edge" style="--step:5" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#normal-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="747.8666666666668" y="508" width="131.60000000000002" height="16" rx="3" class="c-mask"/>
+          <text x="813.6666666666667" y="518" class="t-muted" font-size="9" text-anchor="middle">07  Return final review</text>
+        </g>
+        </g>
+
+        <g data-edge-from="router" data-edge-to="pi" data-edge-label="08  Deliver final response" data-edge-key="6" data-edge-id="m8">
+          <path data-composition-edge-from="router" data-composition-edge-to="pi" data-composition-edge-id="m8" data-composition-points="675.3333333333334,586;426.6666666666667,586" d="M 675.3333333333334 586 L 426.6666666666667 586" class="a-default" data-animate="edge" style="--step:6" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#normal-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="477.4" y="566" width="147.20000000000002" height="16" rx="3" class="c-mask"/>
+          <text x="551" y="576" class="t-muted" font-size="9" text-anchor="middle">08  Deliver final response</text>
+        </g>
+        </g>
+
+        <g data-edge-from="pi" data-edge-to="code" data-edge-label="09  Return completed answer" data-edge-key="7" data-edge-id="m9">
+          <path data-composition-edge-from="pi" data-composition-edge-to="code" data-composition-edge-id="m9" data-composition-points="412.6666666666667,644;164,644" d="M 412.6666666666667 644 L 164 644" class="a-default" data-animate="edge" style="--step:7" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#normal-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="212.13333333333338" y="624" width="152.4" height="16" rx="3" class="c-mask"/>
+          <text x="288.33333333333337" y="634" class="t-muted" font-size="9" text-anchor="middle">09  Return completed answer</text>
+        </g>
+        </g>
+
+        <!-- Segment Labels -->
+
+
+        <!-- Participants -->
+        <g id="normal-node-code" data-node-id="code" data-node-label="REVIEW RUNNER" tabindex="0" role="button" aria-label="Focus REVIEW RUNNER, Python + JavaScript, Sequence participant" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Python + JavaScript" data-node-context="Sequence participant">
+          <title>REVIEW RUNNER · Python + JavaScript · Sequence participant</title>
+          <rect x="62" y="72" width="190" height="60" rx="6" class="c-mask"/>
+          <rect x="62" y="72" width="190" height="60" rx="6" class="c-backend" data-animate="node" style="--step:0" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(68 78) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="157" y="108" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">REVIEW RUNNER</text>
+          <text data-detail="context" x="157" y="122" class="t-muted" font-size="7" text-anchor="middle">Python + JavaScript</text>
+        </g>
+
+        <g id="normal-node-pi" data-node-id="pi" data-node-label="PI ORCHESTRATOR" tabindex="0" role="button" aria-label="Focus PI ORCHESTRATOR, Pi SDK review session, Sequence participant" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="Pi SDK review session" data-node-context="Sequence participant">
+          <title>PI ORCHESTRATOR · Pi SDK review session · Sequence participant</title>
+          <rect x="324.6666666666667" y="72" width="190" height="60" rx="6" class="c-mask"/>
+          <rect x="324.6666666666667" y="72" width="190" height="60" rx="6" class="c-messagebus" data-animate="node" style="--step:1" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="messagebus" class="semantic-sigil s-messagebus" transform="translate(330.6666666666667 78) scale(0.6875)">
+            <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/>
+            <circle cx="5" cy="4.5" r="1" class="sigil-fill"/>
+            <circle cx="10.5" cy="8" r="1" class="sigil-fill"/>
+            <circle cx="7" cy="11.5" r="1" class="sigil-fill"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="419.6666666666667" y="108" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">PI ORCHESTRATOR</text>
+          <text data-detail="context" x="419.6666666666667" y="122" class="t-muted" font-size="7" text-anchor="middle">Pi SDK review session</text>
+        </g>
+
+        <g id="normal-node-router" data-node-id="router" data-node-label="OPENROUTER" tabindex="0" role="button" aria-label="Focus OPENROUTER, API routing, Sequence participant" aria-pressed="false" data-node-kind="cloud" data-node-sublabel="API routing" data-node-context="Sequence participant">
+          <title>OPENROUTER · API routing · Sequence participant</title>
+          <rect x="587.3333333333334" y="72" width="190" height="60" rx="6" class="c-mask"/>
+          <rect x="587.3333333333334" y="72" width="190" height="60" rx="6" class="c-cloud" data-animate="node" style="--step:2" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="cloud" class="semantic-sigil s-cloud" transform="translate(593.3333333333334 78) scale(0.6875)">
+            <path d="M4.3 12.5h7.3a2.4 2.4 0 0 0 .2-4.8 4 4 0 0 0-7.5-1.3A3.1 3.1 0 0 0 4.3 12.5Z"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="682.3333333333334" y="108" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">OPENROUTER</text>
+          <text data-detail="context" x="682.3333333333334" y="122" class="t-muted" font-size="7" text-anchor="middle">API routing</text>
+        </g>
+
+        <g id="normal-node-model" data-node-id="model" data-node-label="LLM PROVIDER" tabindex="0" role="button" aria-label="Focus LLM PROVIDER, Reasoning + tool requests, Sequence participant" aria-pressed="false" data-node-kind="external" data-node-sublabel="Reasoning + tool requests" data-node-context="Sequence participant">
+          <title>LLM PROVIDER · Reasoning + tool requests · Sequence participant</title>
+          <rect x="850" y="72" width="190" height="60" rx="6" class="c-mask"/>
+          <rect x="850" y="72" width="190" height="60" rx="6" class="c-external" data-animate="node" style="--step:3" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(856 78) scale(0.6875)">
+            <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
+            <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="945" y="108" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">LLM PROVIDER</text>
+          <text data-detail="context" x="945" y="122" class="t-muted" font-size="7" text-anchor="middle">Reasoning + tool requests</text>
+        </g>
+
+        <!-- Legend -->
+
+      </svg></div><div class="view" id="tool" hidden><svg viewBox="0 145 1080 1212" data-sequence-column-fit="spread" role="img" lang="en" aria-labelledby="archify-diagram-title archify-diagram-description" data-animation="trace" data-preset="classic" data-quality-profile="standard" data-motion-choreography="sequence">
+        <title id="tool-archify-diagram-title">Tool follow-up: responsibilities</title>
+        <desc id="tool-archify-diagram-description">A sequence diagram generated by Archify.</desc>
+        <!-- Definitions -->
+        <defs>
+          <marker id="tool-arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" class="m-default" />
+          </marker>
+          <marker id="tool-arrowhead-emphasis" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" class="m-emphasis" />
+          </marker>
+          <marker id="tool-arrowhead-security" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" class="m-security" />
+          </marker>
+          <marker id="tool-arrowhead-dashed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" class="m-dashed" />
+          </marker>
+          <pattern id="tool-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" class="c-grid" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <!-- Background Grid -->
+        <rect width="100%" height="100%" fill="url(#tool-grid)" />
+
+        <!-- Time Segments -->
+
+
+        <g class="owner-bands"><rect x="33" y="145" width="248" height="1212" fill="var(--backend-stroke)" opacity=".035"/><rect x="295.6667" y="145" width="248" height="1212" fill="var(--messagebus-stroke)" opacity=".035"/><rect x="558.3333" y="145" width="248" height="1212" fill="var(--cloud-stroke)" opacity=".035"/><rect x="821" y="145" width="248" height="1212" fill="var(--external-stroke)" opacity=".035"/></g><!-- Lifelines -->
+        <path d="M 157 142 L 157 1337" class="a-default" stroke-width="0.8" stroke-dasharray="3,7"/>
+        <path d="M 419.6666666666667 142 L 419.6666666666667 1337" class="a-default" stroke-width="0.8" stroke-dasharray="3,7"/>
+        <path d="M 682.3333333333334 142 L 682.3333333333334 1337" class="a-default" stroke-width="0.8" stroke-dasharray="3,7"/>
+        <path d="M 945 142 L 945 1337" class="a-default" stroke-width="0.8" stroke-dasharray="3,7"/>
+
+        <!-- Activations -->
+
+
+        <!-- Messages --><g data-local-id="m1" class="local-note"><rect x="42" y="153" width="230" height="40" rx="7"/><text x="157" y="169" text-anchor="middle">01  Prepare + intake check</text><text x="157" y="184" text-anchor="middle" class="local-caption">Local work inside Review runner</text></g><g data-local-id="m10" class="local-note"><rect x="42" y="675" width="230" height="40" rx="7"/><text x="157" y="691" text-anchor="middle">10  Read saved snapshot</text><text x="157" y="706" text-anchor="middle" class="local-caption">Local work inside Review runner</text></g><g data-local-id="m12" class="local-note"><rect x="304.6667" y="791" width="230" height="40" rx="7"/><text x="419.6667" y="807" text-anchor="middle">12  Append result to context</text><text x="419.6667" y="822" text-anchor="middle" class="local-caption">Local work inside Pi orchestrator</text></g><g data-local-id="m20" class="local-note"><rect x="42" y="1255" width="230" height="40" rx="7"/><text x="157" y="1271" text-anchor="middle">20  Validate + save review</text><text x="157" y="1286" text-anchor="middle" class="local-caption">Local work inside Review runner</text></g>
+        <g data-edge-from="code" data-edge-to="pi" data-edge-label="02  Initialize review session" data-edge-key="0" data-edge-id="m2">
+          <path data-composition-edge-from="code" data-composition-edge-to="pi" data-composition-edge-id="m2" data-composition-points="164,238;412.6666666666667,238" d="M 164 238 L 412.6666666666667 238" class="a-default" data-animate="edge" style="--step:0" stroke-width="1.4" marker-end="url(#tool-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="206.93333333333337" y="218" width="162.8" height="16" rx="3" class="c-mask"/>
+          <text x="288.33333333333337" y="228" class="t-muted" font-size="9" text-anchor="middle">02  Initialize review session</text>
+        </g>
+        </g>
+
+        <g data-edge-from="pi" data-edge-to="code" data-edge-label="03  Invoke JS request guard" data-edge-key="1" data-edge-id="m3">
+          <path data-composition-edge-from="pi" data-composition-edge-to="code" data-composition-edge-id="m3" data-composition-points="412.6666666666667,296;164,296" d="M 412.6666666666667 296 L 164 296" class="a-default" data-animate="edge" style="--step:1" stroke-width="1.4" marker-end="url(#tool-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="212.13333333333338" y="276" width="152.4" height="16" rx="3" class="c-mask"/>
+          <text x="288.33333333333337" y="286" class="t-muted" font-size="9" text-anchor="middle">03  Invoke JS request guard</text>
+        </g>
+        </g>
+
+        <g data-edge-from="code" data-edge-to="pi" data-edge-label="04  Budget check passed; continue" data-edge-key="2" data-edge-id="m4">
+          <path data-composition-edge-from="code" data-composition-edge-to="pi" data-composition-edge-id="m4" data-composition-points="164,354;412.6666666666667,354" d="M 164 354 L 412.6666666666667 354" class="a-default" data-animate="edge" style="--step:2" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#tool-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="196.53333333333336" y="334" width="183.6" height="16" rx="3" class="c-mask"/>
+          <text x="288.33333333333337" y="344" class="t-muted" font-size="9" text-anchor="middle">04  Budget check passed; continue</text>
+        </g>
+        </g>
+
+        <g data-edge-from="pi" data-edge-to="router" data-edge-label="05  Send review prompt" data-edge-key="3" data-edge-id="m5">
+          <path data-composition-edge-from="pi" data-composition-edge-to="router" data-composition-edge-id="m5" data-composition-points="426.6666666666667,412;675.3333333333334,412" d="M 426.6666666666667 412 L 675.3333333333334 412" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.4" marker-end="url(#tool-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="487.8" y="392" width="126.4" height="16" rx="3" class="c-mask"/>
+          <text x="551" y="402" class="t-muted" font-size="9" text-anchor="middle"><tspan x="551" dy="-12">05  Send review prompt</tspan><tspan x="551" dy="14">to model via OpenRouter</tspan></text>
+        </g>
+        </g>
+
+        <g data-edge-from="router" data-edge-to="model" data-edge-label="06  Route model request" data-edge-key="4" data-edge-id="m6">
+          <path data-composition-edge-from="router" data-composition-edge-to="model" data-composition-edge-id="m6" data-composition-points="689.3333333333334,470;938,470" d="M 689.3333333333334 470 L 938 470" class="a-default" data-animate="edge" style="--step:4" stroke-width="1.4" marker-end="url(#tool-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="747.8666666666668" y="450" width="131.60000000000002" height="16" rx="3" class="c-mask"/>
+          <text x="813.6666666666667" y="460" class="t-muted" font-size="9" text-anchor="middle">06  Route model request</text>
+        </g>
+        </g>
+
+        <g data-edge-from="model" data-edge-to="router" data-edge-label="07  Request repository tool" data-edge-key="5" data-edge-id="m7">
+          <path data-composition-edge-from="model" data-composition-edge-to="router" data-composition-edge-id="m7" data-composition-points="938,528;689.3333333333334,528" d="M 938 528 L 689.3333333333334 528" class="a-default" data-animate="edge" style="--step:5" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#tool-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="737.4666666666667" y="508" width="152.4" height="16" rx="3" class="c-mask"/>
+          <text x="813.6666666666667" y="518" class="t-muted" font-size="9" text-anchor="middle">07  Request repository tool</text>
+        </g>
+        </g>
+
+        <g data-edge-from="router" data-edge-to="pi" data-edge-label="08  Carry tool request" data-edge-key="6" data-edge-id="m8">
+          <path data-composition-edge-from="router" data-composition-edge-to="pi" data-composition-edge-id="m8" data-composition-points="675.3333333333334,586;426.6666666666667,586" d="M 675.3333333333334 586 L 426.6666666666667 586" class="a-default" data-animate="edge" style="--step:6" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#tool-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="487.8" y="566" width="126.4" height="16" rx="3" class="c-mask"/>
+          <text x="551" y="576" class="t-muted" font-size="9" text-anchor="middle">08  Carry tool request</text>
+        </g>
+        </g>
+
+        <g data-edge-from="pi" data-edge-to="code" data-edge-label="09  Invoke custom repo tool" data-edge-key="7" data-edge-id="m9">
+          <path data-composition-edge-from="pi" data-composition-edge-to="code" data-composition-edge-id="m9" data-composition-points="412.6666666666667,644;164,644" d="M 412.6666666666667 644 L 164 644" class="a-default" data-animate="edge" style="--step:7" stroke-width="1.4" marker-end="url(#tool-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="212.13333333333338" y="624" width="152.4" height="16" rx="3" class="c-mask"/>
+          <text x="288.33333333333337" y="634" class="t-muted" font-size="9" text-anchor="middle">09  Invoke custom repo tool</text>
+        </g>
+        </g>
+
+        <g data-edge-from="code" data-edge-to="pi" data-edge-label="11  Return retrieved evidence" data-edge-key="8" data-edge-id="m11">
+          <path data-composition-edge-from="code" data-composition-edge-to="pi" data-composition-edge-id="m11" data-composition-points="164,760;412.6666666666667,760" d="M 164 760 L 412.6666666666667 760" class="a-default" data-animate="edge" style="--step:8" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#tool-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="206.93333333333337" y="740" width="162.8" height="16" rx="3" class="c-mask"/>
+          <text x="288.33333333333337" y="750" class="t-muted" font-size="9" text-anchor="middle">11  Return retrieved evidence</text>
+        </g>
+        </g>
+
+        <g data-edge-from="pi" data-edge-to="code" data-edge-label="13  Invoke JS guard again" data-edge-key="9" data-edge-id="m13">
+          <path data-composition-edge-from="pi" data-composition-edge-to="code" data-composition-edge-id="m13" data-composition-points="412.6666666666667,876;164,876" d="M 412.6666666666667 876 L 164 876" class="a-default" data-animate="edge" style="--step:9" stroke-width="1.4" marker-end="url(#tool-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="217.33333333333337" y="856" width="142" height="16" rx="3" class="c-mask"/>
+          <text x="288.33333333333337" y="866" class="t-muted" font-size="9" text-anchor="middle">13  Invoke JS guard again</text>
+        </g>
+        </g>
+
+        <g data-edge-from="code" data-edge-to="pi" data-edge-label="14  Budget check passed; continue" data-edge-key="10" data-edge-id="m14">
+          <path data-composition-edge-from="code" data-composition-edge-to="pi" data-composition-edge-id="m14" data-composition-points="164,934;412.6666666666667,934" d="M 164 934 L 412.6666666666667 934" class="a-default" data-animate="edge" style="--step:10" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#tool-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="196.53333333333336" y="914" width="183.6" height="16" rx="3" class="c-mask"/>
+          <text x="288.33333333333337" y="924" class="t-muted" font-size="9" text-anchor="middle">14  Budget check passed; continue</text>
+        </g>
+        </g>
+
+        <g data-edge-from="pi" data-edge-to="router" data-edge-label="15  Send updated review context" data-edge-key="11" data-edge-id="m15">
+          <path data-composition-edge-from="pi" data-composition-edge-to="router" data-composition-edge-id="m15" data-composition-points="426.6666666666667,992;675.3333333333334,992" d="M 426.6666666666667 992 L 675.3333333333334 992" class="a-default" data-animate="edge" style="--step:11" stroke-width="1.4" marker-end="url(#tool-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="464.4" y="972" width="173.20000000000002" height="16" rx="3" class="c-mask"/>
+          <text x="551" y="982" class="t-muted" font-size="9" text-anchor="middle"><tspan x="551" dy="-12">15  Send updated review context</tspan><tspan x="551" dy="14">to model via OpenRouter</tspan></text>
+        </g>
+        </g>
+
+        <g data-edge-from="router" data-edge-to="model" data-edge-label="16  Route follow-up request" data-edge-key="12" data-edge-id="m16">
+          <path data-composition-edge-from="router" data-composition-edge-to="model" data-composition-edge-id="m16" data-composition-points="689.3333333333334,1050;938,1050" d="M 689.3333333333334 1050 L 938 1050" class="a-default" data-animate="edge" style="--step:12" stroke-width="1.4" marker-end="url(#tool-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="737.4666666666667" y="1030" width="152.4" height="16" rx="3" class="c-mask"/>
+          <text x="813.6666666666667" y="1040" class="t-muted" font-size="9" text-anchor="middle">16  Route follow-up request</text>
+        </g>
+        </g>
+
+        <g data-edge-from="model" data-edge-to="router" data-edge-label="17  Return final review" data-edge-key="13" data-edge-id="m17">
+          <path data-composition-edge-from="model" data-composition-edge-to="router" data-composition-edge-id="m17" data-composition-points="938,1108;689.3333333333334,1108" d="M 938 1108 L 689.3333333333334 1108" class="a-default" data-animate="edge" style="--step:12" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#tool-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="747.8666666666668" y="1088" width="131.60000000000002" height="16" rx="3" class="c-mask"/>
+          <text x="813.6666666666667" y="1098" class="t-muted" font-size="9" text-anchor="middle">17  Return final review</text>
+        </g>
+        </g>
+
+        <g data-edge-from="router" data-edge-to="pi" data-edge-label="18  Deliver final response" data-edge-key="14" data-edge-id="m18">
+          <path data-composition-edge-from="router" data-composition-edge-to="pi" data-composition-edge-id="m18" data-composition-points="675.3333333333334,1166;426.6666666666667,1166" d="M 675.3333333333334 1166 L 426.6666666666667 1166" class="a-default" data-animate="edge" style="--step:12" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#tool-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="477.4" y="1146" width="147.20000000000002" height="16" rx="3" class="c-mask"/>
+          <text x="551" y="1156" class="t-muted" font-size="9" text-anchor="middle">18  Deliver final response</text>
+        </g>
+        </g>
+
+        <g data-edge-from="pi" data-edge-to="code" data-edge-label="19  Return completed answer" data-edge-key="15" data-edge-id="m19">
+          <path data-composition-edge-from="pi" data-composition-edge-to="code" data-composition-edge-id="m19" data-composition-points="412.6666666666667,1224;164,1224" d="M 412.6666666666667 1224 L 164 1224" class="a-default" data-animate="edge" style="--step:12" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#tool-arrowhead)"/>
+        <g data-detail="context">
+          <rect x="212.13333333333338" y="1204" width="152.4" height="16" rx="3" class="c-mask"/>
+          <text x="288.33333333333337" y="1214" class="t-muted" font-size="9" text-anchor="middle">19  Return completed answer</text>
+        </g>
+        </g>
+
+        <!-- Segment Labels -->
+
+
+        <!-- Participants -->
+        <g id="tool-node-code" data-node-id="code" data-node-label="REVIEW RUNNER" tabindex="0" role="button" aria-label="Focus REVIEW RUNNER, Python + JavaScript, Sequence participant" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Python + JavaScript" data-node-context="Sequence participant">
+          <title>REVIEW RUNNER · Python + JavaScript · Sequence participant</title>
+          <rect x="62" y="72" width="190" height="60" rx="6" class="c-mask"/>
+          <rect x="62" y="72" width="190" height="60" rx="6" class="c-backend" data-animate="node" style="--step:0" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(68 78) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="157" y="108" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">REVIEW RUNNER</text>
+          <text data-detail="context" x="157" y="122" class="t-muted" font-size="7" text-anchor="middle">Python + JavaScript</text>
+        </g>
+
+        <g id="tool-node-pi" data-node-id="pi" data-node-label="PI ORCHESTRATOR" tabindex="0" role="button" aria-label="Focus PI ORCHESTRATOR, Pi SDK review session, Sequence participant" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="Pi SDK review session" data-node-context="Sequence participant">
+          <title>PI ORCHESTRATOR · Pi SDK review session · Sequence participant</title>
+          <rect x="324.6666666666667" y="72" width="190" height="60" rx="6" class="c-mask"/>
+          <rect x="324.6666666666667" y="72" width="190" height="60" rx="6" class="c-messagebus" data-animate="node" style="--step:1" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="messagebus" class="semantic-sigil s-messagebus" transform="translate(330.6666666666667 78) scale(0.6875)">
+            <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/>
+            <circle cx="5" cy="4.5" r="1" class="sigil-fill"/>
+            <circle cx="10.5" cy="8" r="1" class="sigil-fill"/>
+            <circle cx="7" cy="11.5" r="1" class="sigil-fill"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="419.6666666666667" y="108" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">PI ORCHESTRATOR</text>
+          <text data-detail="context" x="419.6666666666667" y="122" class="t-muted" font-size="7" text-anchor="middle">Pi SDK review session</text>
+        </g>
+
+        <g id="tool-node-router" data-node-id="router" data-node-label="OPENROUTER" tabindex="0" role="button" aria-label="Focus OPENROUTER, API routing, Sequence participant" aria-pressed="false" data-node-kind="cloud" data-node-sublabel="API routing" data-node-context="Sequence participant">
+          <title>OPENROUTER · API routing · Sequence participant</title>
+          <rect x="587.3333333333334" y="72" width="190" height="60" rx="6" class="c-mask"/>
+          <rect x="587.3333333333334" y="72" width="190" height="60" rx="6" class="c-cloud" data-animate="node" style="--step:2" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="cloud" class="semantic-sigil s-cloud" transform="translate(593.3333333333334 78) scale(0.6875)">
+            <path d="M4.3 12.5h7.3a2.4 2.4 0 0 0 .2-4.8 4 4 0 0 0-7.5-1.3A3.1 3.1 0 0 0 4.3 12.5Z"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="682.3333333333334" y="108" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">OPENROUTER</text>
+          <text data-detail="context" x="682.3333333333334" y="122" class="t-muted" font-size="7" text-anchor="middle">API routing</text>
+        </g>
+
+        <g id="tool-node-model" data-node-id="model" data-node-label="LLM PROVIDER" tabindex="0" role="button" aria-label="Focus LLM PROVIDER, Reasoning + tool requests, Sequence participant" aria-pressed="false" data-node-kind="external" data-node-sublabel="Reasoning + tool requests" data-node-context="Sequence participant">
+          <title>LLM PROVIDER · Reasoning + tool requests · Sequence participant</title>
+          <rect x="850" y="72" width="190" height="60" rx="6" class="c-mask"/>
+          <rect x="850" y="72" width="190" height="60" rx="6" class="c-external" data-animate="node" style="--step:3" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(856 78) scale(0.6875)">
+            <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
+            <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="945" y="108" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">LLM PROVIDER</text>
+          <text data-detail="context" x="945" y="122" class="t-muted" font-size="7" text-anchor="middle">Reasoning + tool requests</text>
+        </g>
+
+        <!-- Legend -->
+
+      </svg></div></div></section><footer class="foot"><b id="difference"></b><span>Check-passed arrow is conceptual, within one wrapped call · source 904920dd1712</span></footer></main><script>const flows={"normal":{"title":"Normal call","diagram":{"schema_version":1,"diagram_type":"sequence","meta":{"title":"Normal call: responsibilities","output":"artifacts/pr-review-flow/normal-sequence.html","quality_profile":"standard","locale":"en","repository":{"url":"https://github.com/abhinavkumar17/arch-drift-detection.git","revision":"904920dd17129efddb8d15c0e246dfeb14eee906"},"column_fit":"spread","viewBox":[1080,822],"legend":{"mode":"hidden"}},"participants":[{"id":"code","type":"backend","label":"REVIEW RUNNER","sublabel":"Python + JavaScript","sources":[{"path":"review_local.py","line":178},{"path":"repo_tools.mjs","line":1}]},{"id":"pi","type":"messagebus","label":"PI ORCHESTRATOR","sublabel":"Pi SDK review session","sources":[{"path":"pi_repo_review.mjs","line":39}]},{"id":"router","type":"cloud","label":"OPENROUTER","sublabel":"API routing"},{"id":"model","type":"external","label":"LLM PROVIDER","sublabel":"Reasoning + tool requests"}],"messages":[{"id":"m2","from":"code","to":"pi","y":238,"label":"02  Initialize review session","variant":"default"},{"id":"m3","from":"pi","to":"code","y":296,"label":"03  Invoke JS request guard","variant":"default"},{"id":"m4","from":"code","to":"pi","y":354,"label":"04  Budget check passed; continue","variant":"return"},{"id":"m5","from":"pi","to":"router","y":412,"label":"05  Send review prompt","variant":"default"},{"id":"m6","from":"router","to":"model","y":470,"label":"06  Route model request","variant":"default"},{"id":"m7","from":"model","to":"router","y":528,"label":"07  Return final review","variant":"return"},{"id":"m8","from":"router","to":"pi","y":586,"label":"08  Deliver final response","variant":"return"},{"id":"m9","from":"pi","to":"code","y":644,"label":"09  Return completed answer","variant":"return"}],"cards":[{"dot":"emerald","title":"Local operations within owners","items":["Prepare + intake check","Validate + save review"]}]},"steps":[{"id":"m1","from":"code","to":"code","title":"Prepare + intake check","explanation":"Python coordinates Docker preparation of the diff and guidelines, saves a separate repository snapshot, and checks the initial prompt budget. The entire snapshot is not included in the prompt.","y":180},{"id":"m2","from":"code","to":"pi","title":"Initialize review session","explanation":"The Review runner's JavaScript integration initializes Pi and registers your custom repository tools. Pi is an SDK dependency, separate from the Review runner.","y":238},{"id":"m3","from":"pi","to":"code","title":"Invoke JS request guard","explanation":"Pi invokes the Review runner's custom budget wrapper. The adapter wraps the Pi SDK model call: requestGuard checks the conversation and request count before originalStream is allowed to continue.","y":296},{"from":"code","to":"pi","title":"Budget check passed; continue","explanation":"Conceptual handoff inside one wrapped call: the adapter runs requestGuard, then calls originalStream bound to Pi's model runtime. This is not a separate asynchronous callback or a new service boundary.","id":"m4","y":354},{"id":"m5","from":"pi","to":"router","title":"Send review prompt to model via OpenRouter","explanation":"After the guard passes, the original Pi SDK model transport continues the wrapped call to OpenRouter, carrying instructions, annotated diff, tool definitions and current conversation, including retrieved tool results when present. The entire snapshot is not sent.","y":412},{"id":"m6","from":"router","to":"model","title":"Route model request","explanation":"OpenRouter routes the request. The LLM provider performs the reasoning; OpenRouter does not decide which repository tool to run.","y":470},{"id":"m7","from":"model","to":"router","title":"Return final review","explanation":"The LLM has enough evidence and returns a final review.","y":528},{"id":"m8","from":"router","to":"pi","title":"Deliver final response","explanation":"OpenRouter carries the response back into the Pi session. Pi owns the conversation and recognizes completion.","y":586},{"id":"m9","from":"pi","to":"code","title":"Return completed answer","explanation":"Pi exposes the completed answer; your JavaScript adapter saves it for the Python runner.","y":644},{"id":"m10","from":"code","to":"code","title":"Validate + save review","explanation":"Python validates JSON fields and changed-line locations, then saves the findings and limitations. Publication remains separate.","y":702}]},"tool":{"title":"Tool lookup + follow-up","diagram":{"schema_version":1,"diagram_type":"sequence","meta":{"title":"Tool follow-up: responsibilities","output":"artifacts/pr-review-flow/tool-sequence.html","quality_profile":"standard","locale":"en","repository":{"url":"https://github.com/abhinavkumar17/arch-drift-detection.git","revision":"904920dd17129efddb8d15c0e246dfeb14eee906"},"column_fit":"spread","viewBox":[1080,1402],"legend":{"mode":"hidden"}},"participants":[{"id":"code","type":"backend","label":"REVIEW RUNNER","sublabel":"Python + JavaScript","sources":[{"path":"review_local.py","line":178},{"path":"repo_tools.mjs","line":1}]},{"id":"pi","type":"messagebus","label":"PI ORCHESTRATOR","sublabel":"Pi SDK review session","sources":[{"path":"pi_repo_review.mjs","line":39}]},{"id":"router","type":"cloud","label":"OPENROUTER","sublabel":"API routing"},{"id":"model","type":"external","label":"LLM PROVIDER","sublabel":"Reasoning + tool requests"}],"messages":[{"id":"m2","from":"code","to":"pi","y":238,"label":"02  Initialize review session","variant":"default"},{"id":"m3","from":"pi","to":"code","y":296,"label":"03  Invoke JS request guard","variant":"default"},{"id":"m4","from":"code","to":"pi","y":354,"label":"04  Budget check passed; continue","variant":"return"},{"id":"m5","from":"pi","to":"router","y":412,"label":"05  Send review prompt","variant":"default"},{"id":"m6","from":"router","to":"model","y":470,"label":"06  Route model request","variant":"default"},{"id":"m7","from":"model","to":"router","y":528,"label":"07  Request repository tool","variant":"return"},{"id":"m8","from":"router","to":"pi","y":586,"label":"08  Carry tool request","variant":"return"},{"id":"m9","from":"pi","to":"code","y":644,"label":"09  Invoke custom repo tool","variant":"default"},{"id":"m11","from":"code","to":"pi","y":760,"label":"11  Return retrieved evidence","variant":"return"},{"id":"m13","from":"pi","to":"code","y":876,"label":"13  Invoke JS guard again","variant":"default"},{"id":"m14","from":"code","to":"pi","y":934,"label":"14  Budget check passed; continue","variant":"return"},{"id":"m15","from":"pi","to":"router","y":992,"label":"15  Send updated review context","variant":"default"},{"id":"m16","from":"router","to":"model","y":1050,"label":"16  Route follow-up request","variant":"default"},{"id":"m17","from":"model","to":"router","y":1108,"label":"17  Return final review","variant":"return"},{"id":"m18","from":"router","to":"pi","y":1166,"label":"18  Deliver final response","variant":"return"},{"id":"m19","from":"pi","to":"code","y":1224,"label":"19  Return completed answer","variant":"return"}],"cards":[{"dot":"emerald","title":"Local operations within owners","items":["Prepare + intake check","Read saved snapshot","Append result to context","Validate + save review"]}]},"steps":[{"id":"m1","from":"code","to":"code","title":"Prepare + intake check","explanation":"Python coordinates Docker preparation of the diff and guidelines, saves a separate repository snapshot, and checks the initial prompt budget. The entire snapshot is not included in the prompt.","y":180},{"id":"m2","from":"code","to":"pi","title":"Initialize review session","explanation":"The Review runner's JavaScript integration initializes Pi and registers your custom repository tools. Pi is an SDK dependency, separate from the Review runner.","y":238},{"id":"m3","from":"pi","to":"code","title":"Invoke JS request guard","explanation":"Pi invokes the Review runner's custom budget wrapper. The adapter wraps the Pi SDK model call: requestGuard checks the conversation and request count before originalStream is allowed to continue.","y":296},{"from":"code","to":"pi","title":"Budget check passed; continue","explanation":"Conceptual handoff inside one wrapped call: the adapter runs requestGuard, then calls originalStream bound to Pi's model runtime. This is not a separate asynchronous callback or a new service boundary.","id":"m4","y":354},{"id":"m5","from":"pi","to":"router","title":"Send review prompt to model via OpenRouter","explanation":"After the guard passes, the original Pi SDK model transport continues the wrapped call to OpenRouter, carrying instructions, annotated diff, tool definitions and current conversation, including retrieved tool results when present. The entire snapshot is not sent.","y":412},{"id":"m6","from":"router","to":"model","title":"Route model request","explanation":"OpenRouter routes the request. The LLM provider performs the reasoning; OpenRouter does not decide which repository tool to run.","y":470},{"id":"m7","from":"model","to":"router","title":"Request repository tool","explanation":"The LLM emits a structured tool request. It requests work; it does not execute your local repository code.","y":528},{"id":"m8","from":"router","to":"pi","title":"Carry tool request","explanation":"OpenRouter transports the tool request to Pi. Repository tools are not implemented by OpenRouter.","y":586},{"id":"m9","from":"pi","to":"code","title":"Invoke custom repo tool","explanation":"Pi dispatches the registered tool. The search/read implementation in repo_tools.mjs belongs to the Review runner.","y":644},{"id":"m10","from":"code","to":"code","title":"Read saved snapshot","explanation":"The runner's tool reads the repository snapshot created during preparation. The snapshot is stored data, not an executor. Only requested text is retrieved.","y":702},{"id":"m11","from":"code","to":"pi","title":"Return retrieved evidence","explanation":"The runner's tool returns text and any truncation or error notice to Pi.","y":760},{"id":"m12","from":"pi","to":"pi","title":"Append result to context","explanation":"Pi adds the tool result to the conversation and continues its agent loop.","y":818},{"id":"m13","from":"pi","to":"code","title":"Invoke JS guard again","explanation":"Pi invokes the Review runner's custom budget wrapper. The adapter wraps the Pi SDK model call: requestGuard checks the conversation and request count before originalStream is allowed to continue.","y":876},{"from":"code","to":"pi","title":"Budget check passed; continue","explanation":"Conceptual handoff inside one wrapped call: the adapter runs requestGuard, then calls originalStream bound to Pi's model runtime. This is not a separate asynchronous callback or a new service boundary.","id":"m14","y":934},{"id":"m15","from":"pi","to":"router","title":"Send updated review context to model via OpenRouter","explanation":"After the guard passes again, the original Pi SDK model transport continues the wrapped call to OpenRouter, carrying instructions, annotated diff, tool definitions and current conversation, including retrieved tool results when present. The entire snapshot is not sent.","y":992},{"id":"m16","from":"router","to":"model","title":"Route follow-up request","explanation":"The same OpenRouter service routes the follow-up to the same model provider.","y":1050},{"id":"m17","from":"model","to":"router","title":"Return final review","explanation":"The LLM has enough evidence and returns a final review.","y":1108},{"id":"m18","from":"router","to":"pi","title":"Deliver final response","explanation":"OpenRouter carries the response back into the Pi session. Pi owns the conversation and recognizes completion.","y":1166},{"id":"m19","from":"pi","to":"code","title":"Return completed answer","explanation":"Pi exposes the completed answer; your JavaScript adapter saves it for the Python runner.","y":1224},{"id":"m20","from":"code","to":"code","title":"Validate + save review","explanation":"Python validates JSON fields and changed-line locations, then saves the findings and limitations. Publication remains separate.","y":1282}]}},names={"code":"Review runner","pi":"Pi orchestrator","router":"OpenRouter","model":"LLM provider"};let key='normal',index=0,overview=false;const $=id=>document.getElementById(id);function setTheme(t){document.documentElement.dataset.theme=t;$('theme').textContent=t==='dark'?'Light theme':'Dark theme';}function render(scroll=true){const f=flows[key],s=f.steps[index];for(const k of ['normal','tool']){$(k).hidden=k!==key;$(k+'-tab').setAttribute('aria-selected',String(k===key));}document.body.classList.toggle('guided',!overview);document.querySelectorAll('.active').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.owner').forEach(e=>e.classList.toggle('involved',!overview&&(e.dataset.owner===s.from||e.dataset.owner===s.to)));const active=$(key).querySelector('[data-edge-id="'+s.id+'"], [data-local-id="'+s.id+'"]');if(!overview)active.classList.add('active');$('handoff').textContent=overview?'RESPONSIBILITY OVERVIEW':s.from===s.to?'LOCAL WORK / '+names[s.from].toUpperCase():names[s.from].toUpperCase()+' → '+names[s.to].toUpperCase();$('step-title').textContent=overview?f.title:s.title;$('explanation').textContent=overview?'Read down the timeline. Solid arrows cross responsibility boundaries; dashed arrows carry responses. Notes stay inside their owner. Scroll to see the whole journey.':s.explanation;$('position').textContent=overview?'All '+f.steps.length+' steps':'Step '+(index+1)+' of '+f.steps.length;$('back').disabled=overview||index===0;$('next').disabled=!overview&&index===f.steps.length-1;$('next').textContent=overview?'Start':'Next';$('overview').setAttribute('aria-pressed',String(overview));$('guide').dataset.step=overview?'':s.id;$('difference').textContent=key==='normal'?'Normal: one model request, then final review.':'Tool: same start, then custom lookup and a guarded follow-up.';if(scroll){const timeline=$('timeline');if(overview)timeline.scrollTop=0;else{const r=active.getBoundingClientRect(),t=timeline.getBoundingClientRect();timeline.scrollTop+=r.top-t.top-135;}}}
+for(const k of ['normal','tool'])$(k+'-tab').onclick=()=>{key=k;index=0;overview=false;render();};$('next').onclick=()=>{if(overview){overview=false;index=0;}else index=Math.min(index+1,flows[key].steps.length-1);render();};$('back').onclick=()=>{index=Math.max(0,index-1);render();};$('overview').onclick=()=>{overview=true;render();};$('reset').onclick=()=>{index=0;overview=false;render();};$('theme').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');setTheme(new URLSearchParams(location.search).get('theme')==='dark'?'dark':'light');render();</script></body></html>
