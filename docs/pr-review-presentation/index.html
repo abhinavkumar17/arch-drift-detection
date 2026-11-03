@@ -15054,5 +15054,29 @@ html[data-present="true"]:not([data-embed="true"]):has(.step-evidence:not([hidde
   flex: none;
 }
 </style>
+<script id="compact-model-experiments">
+(() => {
+  const panel = document.getElementById('run-evidence-detail');
+  const close = Array.from(panel.children).find(el => el.tagName === 'BUTTON');
+  const details = document.createElement('details');
+  const summary = document.createElement('summary');
+  summary.textContent = 'View token usage, costs and supporting evidence';
+  details.append(summary);
+  Array.from(panel.children).filter(el => el !== close).forEach(el => details.append(el));
+  panel.innerHTML = `<h2>Model experiments</h2>
+    <p>We tested preparation with public <strong>Android and iOS code</strong>. The model comparisons below use controlled <strong>Android examples</strong>.</p>
+    <table><thead><tr><th scope="col">What we tested</th><th scope="col">GLM</th><th scope="col">DeepSeek</th><th scope="col">GPT</th></tr></thead>
+    <tbody><tr><th scope="row">Test 1: API keeps retrying after failure</th><td>Reported issue</td><td>Noticed, but uncertain</td><td>Reported issue</td></tr>
+    <tr><th scope="row">Test 2: Two screens trigger duplicate requests</th><td>Noticed, but uncertain</td><td>Reported issue</td><td>Reported issue</td></tr></tbody></table>
+    <h3>What we learned</h3><p>Lower-cost models caught useful issues too, but results varied by test. GPT reported both at higher recorded cost. We haven’t picked a winner yet.</p>
+    <h3>What we’d like to try next at Rogers</h3><p>A small experiment with <strong>approved PRs our leads have already reviewed</strong>: what does the AI catch, what does it miss, and would its comments help the lead? Measure cost alongside usefulness, then use that evidence to choose models and prompts.</p>`;
+  panel.append(details, close);
+})();
+</script>
+<style>
+#run-evidence-detail > details { margin-top: 20px; }
+#run-evidence-detail > details > summary { cursor: pointer; font-weight: 600; padding: 10px 0; }
+#run-evidence-detail > table th[scope="row"] { text-align: left; font-weight: 600; }
+</style>
 </body>
 </html>
